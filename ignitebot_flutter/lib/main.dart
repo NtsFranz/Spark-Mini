@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
+import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
+import 'SettingsWidget.dart';
 import 'ColorPage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
@@ -74,23 +76,27 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   }
 
   void fetchAPI() async {
-    final response =
-        await http.get(Uri.http('${_echoVRIP.value}:6721', 'session'));
+    try {
+      final response =
+          await http.get(Uri.http('${_echoVRIP.value}:6721', 'session'));
 
-    if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
-      setState(() {
-        lastFrame = APIFrame.fromJson(jsonDecode(response.body));
-        if (lastIP != lastFrame.sessionip) {
-          getIPAPI(lastFrame.sessionip);
-          lastIP = lastFrame.sessionip;
-        }
-      });
-    } else {
-      // If the server did not return a 200 OK response,
-      // then throw an exception.
-      throw Exception('Failed to get game data');
+      if (response.statusCode == 200) {
+        // If the server did return a 200 OK response,
+        // then parse the JSON.
+        setState(() {
+          lastFrame = APIFrame.fromJson(jsonDecode(response.body));
+          if (lastIP != lastFrame.sessionip) {
+            getIPAPI(lastFrame.sessionip);
+            lastIP = lastFrame.sessionip;
+          }
+        });
+      } else {
+        // If the server did not return a 200 OK response,
+        // then throw an exception.
+        throw Exception('Failed to get game data');
+      }
+    } catch (Exception) {
+      throw Exception('Not in match');
     }
   }
 
@@ -132,9 +138,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
     List<Widget> _tabViews = [
       DashboardWidget(lastFrame, lastIPLocationResponse),
-      ColorPage(Colors.blue),
+      AtlasWidget(lastFrame, '', ''),
       ColorPage(Colors.yellow),
-      ColorPage(Colors.purple),
+      SettingsWidget(),
     ];
 
     return Scaffold(

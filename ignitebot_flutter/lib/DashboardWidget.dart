@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'main.dart';
+import 'dart:math';
 
 class DashboardWidget extends StatelessWidget {
   final APIFrame frame;
@@ -46,9 +47,10 @@ class DashboardWidget extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const ListTile(
+                ListTile(
                   title: Text('Server Score'),
-                  subtitle: Text("0"),
+                  subtitle: Text(
+                      '${calculateServerScore(frame.raw['teams'][0]['players'].map((p) => p['ping']), frame.raw['teams'][0]['players'].map((p) => p['ping']))}'),
                 ),
               ],
             ),
@@ -114,5 +116,94 @@ class DashboardWidget extends StatelessWidget {
         child: Text("Not Connected."),
       );
     }
+  }
+
+  /// <summary>
+  /// This method is based on the python code that is used in the VRML Discord bot for calculating server score.
+  /// </summary>
+  /// <returns>The server score</returns>
+  static double calculateServerScore(
+      List<int> bluePings, List<int> orangePings) {
+    // configurable parameters for tuning
+    int min_ping = 10; // you don't lose points for being higher than this value
+    int max_ping = 150; // won't compute if someone is over this number
+    int ping_threshold =
+        100; // you lose extra points for being higher than this
+
+    // points_distribution dictates how many points come from each area:
+    //   0 - difference in sum of pings between teams
+    //   1 - within-team variance
+    //   2 - overall server variance
+    //   3 - overall high/low pings for server
+    List<int> points_distribution = [30, 30, 30, 10];
+
+    // determine max possible server/team variance and max possible sum diff,
+    // given the min/max allowable ping
+    double max_server_var = variance([
+      min_ping,
+      min_ping,
+      min_ping,
+      min_ping,
+      max_ping,
+      max_ping,
+      max_ping,
+      max_ping
+    ]);
+    double max_team_var = variance([min_ping, min_ping, max_ping, max_ping]);
+    int max_sum_diff = (4 * max_ping) - (4 * min_ping);
+
+    // sanity check for ping values
+    if (bluePings == null ||
+        bluePings.length == 0 ||
+        orangePings == null ||
+        orangePings.length == 0) {
+      // Console.WriteLine("No player's ping can be over 150.");
+      return -1;
+    }
+    if (bluePings.reduce(max) > max_ping ||
+        orangePings.reduce(max) > max_ping) {
+      // Console.WriteLine("No player's ping can be over 150.");
+      return -1;
+    }
+
+    // calculate points for sum diff
+    int blueSum = bluePings.reduce((a, b) => a + b);
+    int orangeSum = orangePings.reduce((a, b) => a + b);
+    int sum_diff = (blueSum - orangeSum).abs();
+
+    double sum_points =
+        (1 - (sum_diff / max_sum_diff)) * points_distribution[0];
+
+    // calculate points for team variances
+    double blueVariance = variance(bluePings);
+    double orangeVariance = variance(orangePings);
+
+    double mean_var = (blueVariance + orangeVariance) / 2;
+    double team_points =
+        (1 - (mean_var / max_team_var)) * points_distribution[1];
+
+    // calculate points for server variance
+    List<int> bothPings = new List.from(bluePings)..addAll(orangePings);
+
+    double server_var = variance(bothPings);
+
+    double server_points =
+        (1 - (server_var / max_server_var)) * points_distribution[2];
+
+    // calculate points for high/low ping across server
+    double hilo = ((blueSum + orangeSum) - (min_ping * 8)) /
+        ((ping_threshold * 8) - (min_ping * 8));
+
+    double hilo_points = (1 - hilo) * points_distribution[3];
+
+    // add up points
+    double finalScore = sum_points + team_points + server_points + hilo_points;
+
+    return finalScore;
+  }
+
+  static double variance(List<int> values) {
+    double avg = values.reduce((a, b) => a + b) / values.length;
+    return values.map((v) => (v - avg) * (v - avg)).reduce((a, b) => a + b);
   }
 }
