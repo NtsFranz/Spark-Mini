@@ -1,5 +1,9 @@
+import 'dart:developer';
+
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
+import 'package:settings_ui/settings_ui.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'SettingsWidget.dart';
@@ -8,9 +12,11 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
 import 'package:desktop_window/desktop_window.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(
+      ChangeNotifierProvider(create: (context) => Settings(), child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -53,11 +59,18 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   final RestorableInt _currentPage = RestorableInt(0);
-  final RestorableString _echoVRIP = RestorableString('127.0.0.1');
+  // final RestorableString _echoVRIP = RestorableString('127.0.0.1');
+  // String echoVRIP = '127.0.0.1';
+  // int atlasLinkStyle = 0;
+  // bool atlasLinkUseAngleBrackets = false;
+  // bool atlasLinkAppendTeamNames = false;
+  Timer timer;
 
   APIFrame lastFrame = APIFrame();
   String lastIP = '';
   Map<String, dynamic> lastIPLocationResponse = Map<String, dynamic>();
+  // SharedPreferences prefs;
+  Settings settings = new Settings();
 
   @override
   String get restorationId => widget.restorationId;
@@ -65,20 +78,49 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   @override
   void restoreState(RestorationBucket oldBucket, bool initialRestore) {
     registerForRestoration(_currentPage, 'bottom_navigation_tab_index');
-    registerForRestoration(_echoVRIP, 'echovr_ip');
+    // registerForRestoration(_echoVRIP, 'echovr_ip');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(Duration(seconds: 1), (Timer t) => fetchAPI());
+    loadSettings();
+  }
+
+  void loadSettings() async {
+    settings.load();
+    // SharedPreferences _prefs = await SharedPreferences.getInstance();
+    // setState(() {
+    //   prefs = _prefs;
+    //   echoVRIP = prefs.getString('echoVRIP') ?? "127.0.0.1";
+    //   atlasLinkStyle = prefs.getInt('atlasLinkStyle') ?? 0;
+    //   atlasLinkUseAngleBrackets =
+    //       prefs.getBool('atlasLinkUseAngleBrackets') ?? true;
+    //   atlasLinkAppendTeamNames =
+    //       prefs.getBool('atlasLinkAppendTeamNames') ?? true;
+    // });
+  }
+
+  void setAtlasLinkStyle(int style) async {
+    setState(() {
+      // atlasLinkStyle = style;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setInt('atlasLinkStyle', style);
   }
 
   @override
   void dispose() {
     _currentPage.dispose();
-    _echoVRIP.dispose();
+    // _echoVRIP.dispose();
     super.dispose();
   }
 
   void fetchAPI() async {
     try {
       final response =
-          await http.get(Uri.http('${_echoVRIP.value}:6721', 'session'));
+          await http.get(Uri.http('${settings.echoVRIP}:6721', 'session'));
 
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
@@ -93,10 +135,10 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       } else {
         // If the server did not return a 200 OK response,
         // then throw an exception.
-        throw Exception('Failed to get game data');
+        // throw Exception('Failed to get game data');
       }
     } catch (Exception) {
-      throw Exception('Not in match');
+      // throw Exception('Not in match');
     }
   }
 
@@ -116,6 +158,18 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     }
   }
 
+  // void getSharedPrefs() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   setState(() {
+  //     atlasLinkStyle = prefs.getInt('atlasLinkStyle');
+  //     atlasLinkUseAngleBrackets =
+  //         prefs.getBool('atlasLinkUseAngleBrackets') ?? true;
+  //     atlasLinkAppendTeamNames =
+  //         prefs.getBool('atlasLinkAppendTeamNames') ?? false;
+  //     echoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
+  //   });
+  // }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -127,6 +181,8 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
     final colorScheme = Theme.of(context).colorScheme;
 
+    // getSharedPrefs();
+
     var bottomNavigationItems = <BottomNavigationBarItem>[
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
@@ -137,10 +193,13 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     ];
 
     List<Widget> _tabViews = [
-      DashboardWidget(lastFrame, lastIPLocationResponse),
-      AtlasWidget(lastFrame, '', ''),
+      DashboardWidget(lastFrame, lastIPLocationResponse, settings),
+      AtlasWidget(
+        frame: lastFrame,
+        setAtlasLinkStyle: setAtlasLinkStyle,
+      ),
       ColorPage(Colors.yellow),
-      SettingsWidget(),
+      SettingsWidget(settings),
     ];
 
     return Scaffold(
@@ -175,24 +234,62 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   }
 }
 
+class Settings with ChangeNotifier {
+  String echoVRIP = '127.0.0.1';
+  int atlasLinkStyle = 0;
+  bool atlasLinkUseAngleBrackets = true;
+  bool atlasLinkAppendTeamNames = false;
+
+  Settings() {
+    log('recreate');
+  }
+
+  set setAtlasLinkUseAngleBrackets(bool value) {
+    atlasLinkUseAngleBrackets = value;
+    notifyListeners();
+  }
+
+  Future<void> save() async {
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    // prefs.setString('echoVRIP', echoVRIP);
+    // prefs.setInt('atlasLinkStyle', atlasLinkStyle);
+    // prefs.setBool('atlasLinkUseAngleBrackets', atlasLinkUseAngleBrackets);
+    // prefs.setBool('echoVRIP', atlasLinkAppendTeamNames);
+  }
+
+  Future<void> load() async {
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    // if (prefs.getString('echoVRIP') != null)
+    //   echoVRIP = prefs.getString('echoVRIP');
+    // if (prefs.getInt('atlasLinkStyle') != null)
+    //   atlasLinkStyle = prefs.getInt('atlasLinkStyle');
+    // if (prefs.getBool('atlasLinkUseAngleBrackets') != null)
+    //   atlasLinkUseAngleBrackets = prefs.getBool('atlasLinkUseAngleBrackets');
+    // if (prefs.getBool('atlasLinkAppendTeamNames') != null)
+    //   atlasLinkAppendTeamNames = prefs.getBool('atlasLinkAppendTeamNames');
+  }
+}
+
 class APIFrame {
   final String sessionip;
   final String sessionid;
+  final String match_type;
   final String client_name;
   final String game_clock_display;
   final int blue_points;
   final int orange_points;
-  // final List<APITeam> teams;
+  final List<APITeam> teams;
   final Map<String, dynamic> raw;
 
   APIFrame({
     this.sessionip,
     this.sessionid,
+    this.match_type,
     this.client_name,
     this.game_clock_display,
     this.blue_points,
     this.orange_points,
-    // this.teams,
+    this.teams,
     this.raw,
   });
 
@@ -200,11 +297,14 @@ class APIFrame {
     return APIFrame(
       sessionid: json['sessionid'],
       sessionip: json['sessionip'],
+      match_type: json['match_type'],
       client_name: json['client_name'],
       game_clock_display: json['game_clock_display'],
       blue_points: json['blue_points'],
       orange_points: json['orange_points'],
-      // teams: json['teams'].map((teamJSON) => APITeam.fromJson(teamJSON)).toList(),
+      teams: json['teams']
+          .map<APITeam>((teamJSON) => APITeam.fromJson(teamJSON))
+          .toList(),
       raw: json,
     );
   }
@@ -212,15 +312,30 @@ class APIFrame {
 
 class APITeam {
   final String team;
-  // final List<APIPlayer> teams;
+  final List<APIPlayer> players;
 
-  APITeam({
-    this.team,
-  });
+  APITeam({this.team, this.players});
 
   factory APITeam.fromJson(Map<String, dynamic> json) {
     return APITeam(
       team: json['team'],
+      players: json['players']
+          .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
+          .toList(),
+    );
+  }
+}
+
+class APIPlayer {
+  final String name;
+  final int ping;
+
+  APIPlayer({this.name, this.ping});
+
+  factory APIPlayer.fromJson(Map<String, dynamic> json) {
+    return APIPlayer(
+      name: json['name'],
+      ping: json['ping'],
     );
   }
 }

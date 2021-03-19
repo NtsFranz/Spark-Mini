@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
 import 'dart:math';
+import 'package:flutter/services.dart';
+import 'package:share/share.dart';
 
 class DashboardWidget extends StatelessWidget {
   final APIFrame frame;
   final Map<String, dynamic> ipLocation;
-  DashboardWidget(this.frame, this.ipLocation);
+  // final int atlasLinkStyle;
+  // final bool atlasLinkUseAngleBrackets;
+  // final bool atlasLinkShowTeamNames;
+  // final SharedPreferences prefs;
+  final Settings settings;
+  DashboardWidget(this.frame, this.ipLocation, this.settings);
 
   @override
   Widget build(BuildContext context) {
@@ -16,13 +21,24 @@ class DashboardWidget extends StatelessWidget {
       return ListView(
         padding: const EdgeInsets.all(8),
         children: <Widget>[
-          Text((() {
-            if (frame != null) {
-              return 'Connected: ${frame.sessionid}';
-            } else {
-              return 'Not Connected';
-            }
-          })()),
+          Card(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ListTile(
+                  title: Text(getFormattedLink(frame.sessionid)),
+                  subtitle: Text('Click to copy to clipboard'),
+                  onTap: () {
+                    Clipboard.setData(new ClipboardData(
+                        text: getFormattedLink(frame.sessionid)));
+                  },
+                  onLongPress: () {
+                    Share.share(getFormattedLink(frame.sessionid));
+                  },
+                ),
+              ],
+            ),
+          ),
           Card(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -31,7 +47,8 @@ class DashboardWidget extends StatelessWidget {
                     title: Text('Server Location'),
                     subtitle: Text((() {
                       if (frame != null) {
-                        if (ipLocation != null && ipLocation['success']) {
+                        if (ipLocation != null &&
+                            ipLocation['status'] == 'success') {
                           return '${ipLocation['city']}, ${ipLocation['region']}';
                         } else {
                           return 'IP: ${frame.sessionip}';
@@ -43,72 +60,138 @@ class DashboardWidget extends StatelessWidget {
               ],
             ),
           ),
-          Card(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  title: Text('Server Score'),
-                  subtitle: Text(
-                      '${calculateServerScore(frame.raw['teams'][0]['players'].map((p) => p['ping']), frame.raw['teams'][0]['players'].map((p) => p['ping']))}'),
+          (() {
+            if (frame.match_type == "Social_2.0") {
+              return Card(
+                child:
+                    Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                  ListTile(
+                    title: Center(
+                        heightFactor: 2,
+                        child: Text(
+                          'In Lobby',
+                          textScaleFactor: 2,
+                        )),
+                  )
+                ]),
+              );
+            } else {
+              return Column(children: <Widget>[
+                Card(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      ListTile(
+                        title: Text('Server Score'),
+                        subtitle: Text((() {
+                          if (frame.teams[0].players != null &&
+                              frame.teams[1].players != null) {
+                            return '${calculateServerScore(frame.teams[0].players.map<int>((p) => p.ping).toList(), frame.teams[1].players.map<int>((p) => p.ping).toList())}';
+                          } else {
+                            return 'Not enough players';
+                          }
+                        })()),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
-          Card(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  title: Text(frame.game_clock_display),
-                  subtitle:
-                      Text("${frame.orange_points} - ${frame.blue_points}"),
+                Card(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Row(
+                        children: [
+                          Container(
+                            child: Text(
+                              '${frame.orange_points}',
+                              textScaleFactor: 2,
+                              textAlign: TextAlign.center,
+                            ),
+                            padding: const EdgeInsets.all(16),
+                            width: 80,
+                            color: Colors.orange,
+                          ),
+                          Expanded(
+                              child: Text(
+                            '${frame.game_clock_display}',
+                            textAlign: TextAlign.center,
+                            textScaleFactor: 2,
+                          )),
+                          Container(
+                            child: Text(
+                              '${frame.blue_points}',
+                              textScaleFactor: 2,
+                              textAlign: TextAlign.center,
+                            ),
+                            padding: const EdgeInsets.all(16),
+                            width: 80,
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
-          Card(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  leading: Icon(Icons.person),
-                  tileColor: Colors.orange,
-                  title: Text('Orange Team'),
-                  subtitle: Text(
-                      '${frame.raw['teams'][0]['players'].map((p) => p['name']).join('\n')}'),
+                Card(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      ListTile(
+                        leading: Icon(Icons.person),
+                        tileColor: Colors.orange,
+                        title: Text('Orange Team'),
+                        subtitle: Text(() {
+                          if (frame.teams[0].players != null) {
+                            return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
+                          } else {
+                            return '';
+                          }
+                        }()),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
-          Card(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  leading: Icon(Icons.person),
-                  tileColor: Colors.blue,
-                  title: Text('Blue Team'),
-                  subtitle: Text(
-                      '${frame.raw['teams'][1]['players'].map((p) => p['name']).join('\n')}'),
+                Card(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      ListTile(
+                        leading: Icon(Icons.person),
+                        tileColor: Colors.blue,
+                        title: Text('Blue Team'),
+                        subtitle: Text(() {
+                          if (frame.teams[1].players != null) {
+                            return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
+                          } else {
+                            return '';
+                          }
+                        }()),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
-          Card(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  leading: Icon(Icons.camera),
-                  tileColor: Colors.grey,
-                  title: Text('Spectators'),
-                  subtitle: Text(
-                      '${frame.raw['teams'][2]['players'].map((p) => p['name']).join('\n')}'),
+                Card(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      ListTile(
+                        leading: Icon(Icons.camera),
+                        tileColor: Colors.grey,
+                        title: Text('Spectators'),
+                        subtitle: Text(() {
+                          if (frame.teams[2].players != null) {
+                            return '${frame.teams[2].players.map((p) => p.name).join('\n')}';
+                          } else {
+                            return '';
+                          }
+                        }()),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ]);
+            }
+          }()),
         ],
       );
     } else {
@@ -205,5 +288,47 @@ class DashboardWidget extends StatelessWidget {
   static double variance(List<int> values) {
     double avg = values.reduce((a, b) => a + b) / values.length;
     return values.map((v) => (v - avg) * (v - avg)).reduce((a, b) => a + b);
+  }
+
+  String getFormattedLink(String sessionid) {
+    if (sessionid == null) sessionid = '**********************';
+
+    String link = "";
+
+    // Get settings
+
+    if (settings.atlasLinkUseAngleBrackets) {
+      switch (settings.atlasLinkStyle) {
+        case 0:
+          link = "<ignitebot://choose/$sessionid>";
+          break;
+        case 1:
+          link = "<atlas://j/$sessionid>";
+          break;
+        case 2:
+          link = "<atlas://s/$sessionid>";
+          break;
+      }
+    } else {
+      switch (settings.atlasLinkStyle) {
+        case 0:
+          link = "ignitebot://choose/$sessionid";
+          break;
+        case 1:
+          link = "atlas://j/$sessionid";
+          break;
+        case 2:
+          link = "atlas://s/$sessionid";
+          break;
+      }
+    }
+
+    // if (atlasLinkAppendTeamNames) {
+    //   if (orangeTeamName != '' && blueTeamName != '') {
+    //     link = "$link ${orangeTeamName} vs ${blueTeamName}";
+    //   }
+    // }
+
+    return link;
   }
 }

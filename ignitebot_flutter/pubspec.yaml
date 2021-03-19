@@ -29,6 +29,8 @@ dependencies:
   msix: ^0.1.18
   settings_ui: ^0.6.0
   shared_preferences: ^2.0.4
+  share: ^2.0.1
+  provider: ^5.0.0
 
 
   # The following adds the Cupertino Icons font to your application.
