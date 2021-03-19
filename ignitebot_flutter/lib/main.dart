@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:isolate';
 
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
@@ -60,17 +61,17 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   final RestorableInt _currentPage = RestorableInt(0);
   // final RestorableString _echoVRIP = RestorableString('127.0.0.1');
-  // String echoVRIP = '127.0.0.1';
+  String echoVRIP = '127.0.0.1';
   // int atlasLinkStyle = 0;
   // bool atlasLinkUseAngleBrackets = false;
   // bool atlasLinkAppendTeamNames = false;
   Timer timer;
 
-  APIFrame lastFrame = APIFrame();
-  String lastIP = '';
+  static APIFrame lastFrame = APIFrame();
+  static String lastIP = '';
   Map<String, dynamic> lastIPLocationResponse = Map<String, dynamic>();
   // SharedPreferences prefs;
-  Settings settings = new Settings();
+  // Settings settings = new Settings();
 
   @override
   String get restorationId => widget.restorationId;
@@ -85,29 +86,23 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   void initState() {
     super.initState();
     timer = Timer.periodic(Duration(seconds: 1), (Timer t) => fetchAPI());
-    loadSettings();
+    getEchoVRIP();
   }
 
-  void loadSettings() async {
-    settings.load();
-    // SharedPreferences _prefs = await SharedPreferences.getInstance();
-    // setState(() {
-    //   prefs = _prefs;
-    //   echoVRIP = prefs.getString('echoVRIP') ?? "127.0.0.1";
-    //   atlasLinkStyle = prefs.getInt('atlasLinkStyle') ?? 0;
-    //   atlasLinkUseAngleBrackets =
-    //       prefs.getBool('atlasLinkUseAngleBrackets') ?? true;
-    //   atlasLinkAppendTeamNames =
-    //       prefs.getBool('atlasLinkAppendTeamNames') ?? true;
-    // });
-  }
-
-  void setAtlasLinkStyle(int style) async {
+  Future<void> getEchoVRIP() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String newEchoVRIP = prefs.getString('echoVRIP');
     setState(() {
-      // atlasLinkStyle = style;
+      echoVRIP = newEchoVRIP;
+    });
+  }
+
+  Future<void> setEchoVRIP(String value) async {
+    setState(() {
+      echoVRIP = value;
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setInt('atlasLinkStyle', style);
+    prefs.setString('echoVRIP', value);
   }
 
   @override
@@ -119,19 +114,18 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   void fetchAPI() async {
     try {
-      final response =
-          await http.get(Uri.http('${settings.echoVRIP}:6721', 'session'));
-
+      log(echoVRIP);
+      final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
-        setState(() {
-          lastFrame = APIFrame.fromJson(jsonDecode(response.body));
-          if (lastIP != lastFrame.sessionip) {
-            getIPAPI(lastFrame.sessionip);
-            lastIP = lastFrame.sessionip;
-          }
-        });
+        // setState(() {
+        lastFrame = APIFrame.fromJson(jsonDecode(response.body));
+        if (lastIP != lastFrame.sessionip) {
+          getIPAPI(lastFrame.sessionip);
+          lastIP = lastFrame.sessionip;
+        }
+        // });
       } else {
         // If the server did not return a 200 OK response,
         // then throw an exception.
@@ -186,20 +180,20 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     var bottomNavigationItems = <BottomNavigationBarItem>[
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
-      BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
+      // BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
       BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
     ];
 
     List<Widget> _tabViews = [
-      DashboardWidget(lastFrame, lastIPLocationResponse, settings),
-      AtlasWidget(
-        frame: lastFrame,
-        setAtlasLinkStyle: setAtlasLinkStyle,
-      ),
+      DashboardWidget(lastFrame, lastIPLocationResponse),
+      // AtlasWidget(
+      //   frame: lastFrame,
+      //   setAtlasLinkStyle: setAtlasLinkStyle,
+      // ),
       ColorPage(Colors.yellow),
-      SettingsWidget(settings),
+      SettingsWidget(echoVRIP, setEchoVRIP),
     ];
 
     return Scaffold(
@@ -209,12 +203,14 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         title: Text(widget.title),
       ),
       body: _tabViews[_currentPage.value],
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          fetchAPI();
-        },
-        child: const Icon(Icons.refresh),
-        tooltip: "Refresh Data",
+      floatingActionButton: Consumer<Settings>(
+        builder: (context, settings, child) => FloatingActionButton(
+          onPressed: () {
+            fetchAPI();
+          },
+          child: const Icon(Icons.refresh),
+          tooltip: "Refresh Data",
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         showUnselectedLabels: true,
@@ -235,38 +231,54 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 }
 
 class Settings with ChangeNotifier {
-  String echoVRIP = '127.0.0.1';
+  // String echoVRIP = '127.0.0.1';
   int atlasLinkStyle = 0;
   bool atlasLinkUseAngleBrackets = true;
   bool atlasLinkAppendTeamNames = false;
 
   Settings() {
     log('recreate');
+    load();
   }
 
-  set setAtlasLinkUseAngleBrackets(bool value) {
+  // void setEchoVRIP(String value) {
+  //   echoVRIP = value;
+  //   notifyListeners();
+  // }
+
+  void setAtlasLinkUseAngleBrackets(bool value) {
     atlasLinkUseAngleBrackets = value;
     notifyListeners();
+    save();
+  }
+
+  void setAtlasLinkStyle(int value) {
+    atlasLinkStyle = value;
+    notifyListeners();
+    save();
+  }
+
+  void setAtlasLinkAppendTeamNames(bool value) {
+    atlasLinkAppendTeamNames = value;
+    notifyListeners();
+    save();
   }
 
   Future<void> save() async {
-    // SharedPreferences prefs = await SharedPreferences.getInstance();
-    // prefs.setString('echoVRIP', echoVRIP);
-    // prefs.setInt('atlasLinkStyle', atlasLinkStyle);
-    // prefs.setBool('atlasLinkUseAngleBrackets', atlasLinkUseAngleBrackets);
-    // prefs.setBool('echoVRIP', atlasLinkAppendTeamNames);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setInt('atlasLinkStyle', atlasLinkStyle);
+    prefs.setBool('atlasLinkUseAngleBrackets', atlasLinkUseAngleBrackets);
+    prefs.setBool('echoVRIP', atlasLinkAppendTeamNames);
   }
 
   Future<void> load() async {
-    // SharedPreferences prefs = await SharedPreferences.getInstance();
-    // if (prefs.getString('echoVRIP') != null)
-    //   echoVRIP = prefs.getString('echoVRIP');
-    // if (prefs.getInt('atlasLinkStyle') != null)
-    //   atlasLinkStyle = prefs.getInt('atlasLinkStyle');
-    // if (prefs.getBool('atlasLinkUseAngleBrackets') != null)
-    //   atlasLinkUseAngleBrackets = prefs.getBool('atlasLinkUseAngleBrackets');
-    // if (prefs.getBool('atlasLinkAppendTeamNames') != null)
-    //   atlasLinkAppendTeamNames = prefs.getBool('atlasLinkAppendTeamNames');
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.getInt('atlasLinkStyle') != null)
+      atlasLinkStyle = prefs.getInt('atlasLinkStyle');
+    if (prefs.getBool('atlasLinkUseAngleBrackets') != null)
+      atlasLinkUseAngleBrackets = prefs.getBool('atlasLinkUseAngleBrackets');
+    if (prefs.getBool('atlasLinkAppendTeamNames') != null)
+      atlasLinkAppendTeamNames = prefs.getBool('atlasLinkAppendTeamNames');
   }
 }
 
@@ -319,9 +331,11 @@ class APITeam {
   factory APITeam.fromJson(Map<String, dynamic> json) {
     return APITeam(
       team: json['team'],
-      players: json['players']
-          .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
-          .toList(),
+      players: json.containsKey('players')
+          ? json['players']
+              .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
+              .toList()
+          : <APIPlayer>[],
     );
   }
 }

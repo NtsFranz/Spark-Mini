@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
 import 'dart:math';
@@ -12,8 +13,8 @@ class DashboardWidget extends StatelessWidget {
   // final bool atlasLinkUseAngleBrackets;
   // final bool atlasLinkShowTeamNames;
   // final SharedPreferences prefs;
-  final Settings settings;
-  DashboardWidget(this.frame, this.ipLocation, this.settings);
+  // final Settings settings;
+  DashboardWidget(this.frame, this.ipLocation);
 
   @override
   Widget build(BuildContext context) {
@@ -25,17 +26,28 @@ class DashboardWidget extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                ListTile(
-                  title: Text(getFormattedLink(frame.sessionid)),
-                  subtitle: Text('Click to copy to clipboard'),
-                  onTap: () {
-                    Clipboard.setData(new ClipboardData(
-                        text: getFormattedLink(frame.sessionid)));
-                  },
-                  onLongPress: () {
-                    Share.share(getFormattedLink(frame.sessionid));
-                  },
-                ),
+                Consumer<Settings>(
+                  builder: (context, settings, child) => ListTile(
+                    title: Text(getFormattedLink(
+                        frame.sessionid,
+                        settings.atlasLinkStyle,
+                        settings.atlasLinkUseAngleBrackets)),
+                    subtitle: Text('Click to copy to clipboard'),
+                    onTap: () {
+                      Clipboard.setData(new ClipboardData(
+                          text: getFormattedLink(
+                              frame.sessionid,
+                              settings.atlasLinkStyle,
+                              settings.atlasLinkUseAngleBrackets)));
+                    },
+                    onLongPress: () {
+                      Share.share(getFormattedLink(
+                          frame.sessionid,
+                          settings.atlasLinkStyle,
+                          settings.atlasLinkUseAngleBrackets));
+                    },
+                  ),
+                )
               ],
             ),
           ),
@@ -290,15 +302,14 @@ class DashboardWidget extends StatelessWidget {
     return values.map((v) => (v - avg) * (v - avg)).reduce((a, b) => a + b);
   }
 
-  String getFormattedLink(String sessionid) {
+  String getFormattedLink(
+      String sessionid, int atlasLinkStyle, bool atlasLinkUseAngleBrackets) {
     if (sessionid == null) sessionid = '**********************';
 
     String link = "";
 
-    // Get settings
-
-    if (settings.atlasLinkUseAngleBrackets) {
-      switch (settings.atlasLinkStyle) {
+    if (atlasLinkUseAngleBrackets) {
+      switch (atlasLinkStyle) {
         case 0:
           link = "<ignitebot://choose/$sessionid>";
           break;
@@ -310,7 +321,7 @@ class DashboardWidget extends StatelessWidget {
           break;
       }
     } else {
-      switch (settings.atlasLinkStyle) {
+      switch (atlasLinkStyle) {
         case 0:
           link = "ignitebot://choose/$sessionid";
           break;
