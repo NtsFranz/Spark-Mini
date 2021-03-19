@@ -91,7 +91,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   Future<void> getEchoVRIP() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String newEchoVRIP = prefs.getString('echoVRIP');
+    String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
     setState(() {
       echoVRIP = newEchoVRIP;
     });
@@ -109,10 +109,12 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   void dispose() {
     _currentPage.dispose();
     // _echoVRIP.dispose();
+    timer.cancel();
     super.dispose();
   }
 
   void fetchAPI() async {
+    // return;
     try {
       log(echoVRIP);
       final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
@@ -120,10 +122,14 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         // If the server did return a 200 OK response,
         // then parse the JSON.
         // setState(() {
-        lastFrame = APIFrame.fromJson(jsonDecode(response.body));
-        if (lastIP != lastFrame.sessionip) {
-          getIPAPI(lastFrame.sessionip);
-          lastIP = lastFrame.sessionip;
+        try {
+          lastFrame = APIFrame.fromJson(jsonDecode(response.body));
+          if (lastIP != lastFrame.sessionip) {
+            getIPAPI(lastFrame.sessionip);
+            lastIP = lastFrame.sessionip;
+          }
+        } catch (Exception) {
+          print('Failed to parse API data');
         }
         // });
       } else {
@@ -131,8 +137,8 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         // then throw an exception.
         // throw Exception('Failed to get game data');
       }
-    } catch (Exception) {
-      // throw Exception('Not in match');
+    } catch (SocketException) {
+      print('Not in game');
     }
   }
 
@@ -343,13 +349,52 @@ class APITeam {
 class APIPlayer {
   final String name;
   final int ping;
+  final APIStats stats;
 
-  APIPlayer({this.name, this.ping});
+  APIPlayer({this.name, this.ping, this.stats});
 
   factory APIPlayer.fromJson(Map<String, dynamic> json) {
     return APIPlayer(
       name: json['name'],
       ping: json['ping'],
+      stats: APIStats.fromJson(json['stats']),
+    );
+  }
+}
+
+class APIStats {
+  final double possession_time;
+  final int points;
+  final int saves;
+  final int goals;
+  final int stuns;
+  final int steals;
+  final int blocks;
+  final int assists;
+  final int shots_taken;
+
+  APIStats(
+      {this.possession_time,
+      this.points,
+      this.saves,
+      this.goals,
+      this.stuns,
+      this.steals,
+      this.blocks,
+      this.assists,
+      this.shots_taken});
+
+  factory APIStats.fromJson(Map<String, dynamic> json) {
+    return APIStats(
+      possession_time: json['possession_time'],
+      points: json['points'],
+      saves: json['saves'],
+      goals: json['goals'],
+      stuns: json['stuns'],
+      steals: json['steals'],
+      blocks: json['blocks'],
+      assists: json['assists'],
+      shots_taken: json['shots_taken'],
     );
   }
 }

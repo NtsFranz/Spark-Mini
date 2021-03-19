@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:share/share.dart';
+import 'package:latlong/latlong.dart';
 
 class DashboardWidget extends StatelessWidget {
   final APIFrame frame;
@@ -23,6 +24,9 @@ class DashboardWidget extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         children: <Widget>[
           Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15.0),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
@@ -55,7 +59,8 @@ class DashboardWidget extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                ListTile(
+                ExpansionTile(
+                  title: ListTile(
                     title: Text('Server Location'),
                     subtitle: Text((() {
                       if (frame != null) {
@@ -68,7 +73,50 @@ class DashboardWidget extends StatelessWidget {
                       } else {
                         return '---';
                       }
-                    })())),
+                    })()),
+                    leading: Icon(Icons.map),
+                  ),
+                  children: [
+                    (() {
+                      if (ipLocation != null) {
+                        double lat = ipLocation['lat'];
+                        double lon = ipLocation['lon'];
+                        print('$lat $lon');
+                        return Container(
+                            height: 200,
+                            child: FlutterMap(
+                              options: MapOptions(
+                                  center: LatLng(lat, lon),
+                                  zoom: 3.5,
+                                  interactive: false),
+                              layers: [
+                                TileLayerOptions(
+                                    urlTemplate:
+                                        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                    subdomains: ['a', 'b', 'c']),
+                                MarkerLayerOptions(
+                                  markers: [
+                                    Marker(
+                                      width: 10.0,
+                                      height: 10.0,
+                                      point: LatLng(lat, lon),
+                                      builder: (ctx) => Container(
+                                        margin: EdgeInsets.all(0.0),
+                                        decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ));
+                      } else {
+                        return Text('No location found');
+                      }
+                    }())
+                  ],
+                ),
               ],
             ),
           ),
@@ -89,24 +137,7 @@ class DashboardWidget extends StatelessWidget {
               );
             } else {
               return Column(children: <Widget>[
-                Card(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ListTile(
-                        title: Text('Server Score'),
-                        subtitle: Text((() {
-                          if (frame.teams[0].players != null &&
-                              frame.teams[1].players != null) {
-                            return '${calculateServerScore(frame.teams[0].players.map<int>((p) => p.ping).toList(), frame.teams[1].players.map<int>((p) => p.ping).toList())}';
-                          } else {
-                            return 'Not enough players';
-                          }
-                        })()),
-                      ),
-                    ],
-                  ),
-                ),
+                // points and time
                 Card(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -114,14 +145,19 @@ class DashboardWidget extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            child: Text(
-                              '${frame.orange_points}',
-                              textScaleFactor: 2,
-                              textAlign: TextAlign.center,
+                            child: Card(
+                              child: Text(
+                                '${frame.orange_points}',
+                                textScaleFactor: 2,
+                                textAlign: TextAlign.center,
+                              ),
+                              color: Colors.orange.withOpacity(.5),
+                              elevation: 5,
+                              margin: EdgeInsets.all(8),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100)),
                             ),
-                            padding: const EdgeInsets.all(16),
-                            width: 80,
-                            color: Colors.orange,
+                            width: 100,
                           ),
                           Expanded(
                               child: Text(
@@ -130,65 +166,211 @@ class DashboardWidget extends StatelessWidget {
                             textScaleFactor: 2,
                           )),
                           Container(
-                            child: Text(
-                              '${frame.blue_points}',
-                              textScaleFactor: 2,
-                              textAlign: TextAlign.center,
+                            child: Card(
+                              child: Text(
+                                '${frame.blue_points}',
+                                textScaleFactor: 2,
+                                textAlign: TextAlign.center,
+                              ),
+                              color: Colors.blue.withOpacity(.5),
+                              elevation: 5,
+                              margin: EdgeInsets.all(8),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100)),
                             ),
-                            padding: const EdgeInsets.all(16),
-                            width: 80,
-                            color: Colors.blue,
+                            width: 100,
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
+                // server score
                 Card(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      ListTile(
-                        leading: Icon(Icons.person),
-                        tileColor: Colors.orange,
-                        title: Text('Orange Team'),
-                        subtitle: Text(() {
-                          if (frame.teams[0].players != null) {
-                            return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
-                          } else {
-                            return '';
-                          }
-                        }()),
-                      ),
+                      ExpansionTile(
+                        title: ListTile(
+                          title: Text('Server Score'),
+                          subtitle: Text((() {
+                            if (frame.teams[0].players != null &&
+                                frame.teams[1].players != null) {
+                              double score = calculateServerScore(
+                                  frame.teams[0].players
+                                      .map<int>((p) => p.ping)
+                                      .toList(),
+                                  frame.teams[1].players
+                                      .map<int>((p) => p.ping)
+                                      .toList());
+                              if (score == -1) {
+                                return "No player's ping can be over 150";
+                              }
+                              return score.toStringAsFixed(2);
+                            } else {
+                              return 'Not enough players';
+                            }
+                          })()),
+                          trailing: Text('Player Pings'),
+                        ),
+                        children: [
+                          Row(
+                            children: [
+                              DataTable(
+                                columns: const <DataColumn>[
+                                  DataColumn(label: Text('Player Name')),
+                                  DataColumn(label: Text('Ping'))
+                                ],
+                                rows: frame.teams[0].players
+                                    .map<DataRow>((p) => DataRow(
+                                            cells: <DataCell>[
+                                              DataCell(Text(p.name)),
+                                              DataCell(Text(p.ping.toString()))
+                                            ]))
+                                    .toList(),
+                                columnSpacing: 10,
+                                dataRowHeight: 35,
+                                headingRowHeight: 40,
+                                headingTextStyle:
+                                    TextStyle(color: Colors.orange),
+                              ),
+                              DataTable(
+                                columns: const <DataColumn>[
+                                  DataColumn(label: Text('Ping')),
+                                  DataColumn(label: Text('Player Name')),
+                                ],
+                                rows: frame.teams[1].players
+                                    .map<DataRow>(
+                                        (p) => DataRow(cells: <DataCell>[
+                                              DataCell(Text(p.ping.toString())),
+                                              DataCell(Text(p.name)),
+                                            ]))
+                                    .toList(),
+                                columnSpacing: 10,
+                                dataRowHeight: 35,
+                                headingRowHeight: 40,
+                                headingTextStyle: TextStyle(color: Colors.blue),
+                              )
+                            ],
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                          )
+                        ],
+                      )
                     ],
                   ),
                 ),
+                // orange team members
                 Card(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      ListTile(
-                        leading: Icon(Icons.person),
-                        tileColor: Colors.blue,
-                        title: Text('Blue Team'),
-                        subtitle: Text(() {
-                          if (frame.teams[1].players != null) {
-                            return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
-                          } else {
-                            return '';
-                          }
-                        }()),
-                      ),
+                      ExpansionTile(
+                        title: ListTile(
+                          leading: Icon(
+                            Icons.person,
+                            color: Colors.orange,
+                          ),
+                          // tileColor: Colors.orange,
+                          title: Text('Orange Team'),
+                          subtitle: Text(() {
+                            if (frame.teams[0].players != null) {
+                              return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
+                            } else {
+                              return '';
+                            }
+                          }()),
+                        ),
+                        children: [
+                          DataTable(
+                            columns: const <DataColumn>[
+                              DataColumn(label: Text('Name')),
+                              DataColumn(label: Text('Points')),
+                              DataColumn(label: Text('Assists')),
+                              DataColumn(label: Text('Saves')),
+                              DataColumn(label: Text('Steals')),
+                              DataColumn(label: Text('Stuns')),
+                            ],
+                            rows: frame.teams[0].players
+                                .map<DataRow>((p) => DataRow(cells: <DataCell>[
+                                      DataCell(Text(p.name)),
+                                      DataCell(Text(p.stats.points.toString())),
+                                      DataCell(
+                                          Text(p.stats.assists.toString())),
+                                      DataCell(Text(p.stats.saves.toString())),
+                                      DataCell(Text(p.stats.steals.toString())),
+                                      DataCell(Text(p.stats.stuns.toString())),
+                                    ]))
+                                .toList(),
+                            columnSpacing: 10,
+                            dataRowHeight: 35,
+                            headingRowHeight: 40,
+                            headingTextStyle: TextStyle(color: Colors.orange),
+                          )
+                        ],
+                      )
                     ],
                   ),
                 ),
+                // blue team members
+                Card(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      ExpansionTile(
+                        title: ListTile(
+                          leading: Icon(
+                            Icons.person,
+                            color: Colors.blue,
+                          ),
+                          title: Text('Blue Team'),
+                          subtitle: Text(() {
+                            if (frame.teams[1].players != null) {
+                              return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
+                            } else {
+                              return '';
+                            }
+                          }()),
+                        ),
+                        children: [
+                          DataTable(
+                            columns: const <DataColumn>[
+                              DataColumn(label: Text('Name')),
+                              DataColumn(label: Text('Points')),
+                              DataColumn(label: Text('Assists')),
+                              DataColumn(label: Text('Saves')),
+                              DataColumn(label: Text('Steals')),
+                              DataColumn(label: Text('Stuns')),
+                            ],
+                            rows: frame.teams[1].players
+                                .map<DataRow>((p) => DataRow(cells: <DataCell>[
+                                      DataCell(Text(p.name)),
+                                      DataCell(Text(p.stats.points.toString())),
+                                      DataCell(
+                                          Text(p.stats.assists.toString())),
+                                      DataCell(Text(p.stats.saves.toString())),
+                                      DataCell(Text(p.stats.steals.toString())),
+                                      DataCell(Text(p.stats.stuns.toString())),
+                                    ]))
+                                .toList(),
+                            columnSpacing: 10,
+                            dataRowHeight: 35,
+                            headingRowHeight: 40,
+                            headingTextStyle: TextStyle(color: Colors.blue),
+                          )
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+                // spectators
                 Card(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       ListTile(
                         leading: Icon(Icons.camera),
-                        tileColor: Colors.grey,
+                        // tileColor: Colors.grey.withOpacity(.2),
                         title: Text('Spectators'),
                         subtitle: Text(() {
                           if (frame.teams[2].players != null) {
