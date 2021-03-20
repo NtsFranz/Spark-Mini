@@ -10,12 +10,15 @@ import 'package:latlong/latlong.dart';
 class DashboardWidget extends StatelessWidget {
   final APIFrame frame;
   final Map<String, dynamic> ipLocation;
+  final Map<String, dynamic> orangeVRMLTeamInfo;
+  final Map<String, dynamic> blueVRMLTeamInfo;
   // final int atlasLinkStyle;
   // final bool atlasLinkUseAngleBrackets;
   // final bool atlasLinkShowTeamNames;
   // final SharedPreferences prefs;
   // final Settings settings;
-  DashboardWidget(this.frame, this.ipLocation);
+  DashboardWidget(this.frame, this.ipLocation, this.orangeVRMLTeamInfo,
+      this.blueVRMLTeamInfo);
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +81,7 @@ class DashboardWidget extends StatelessWidget {
                   ),
                   children: [
                     (() {
-                      if (ipLocation != null) {
+                      if (ipLocation != null && ipLocation['lat'] != null) {
                         double lat = ipLocation['lat'];
                         double lon = ipLocation['lon'];
                         print('$lat $lon');
@@ -153,9 +156,9 @@ class DashboardWidget extends StatelessWidget {
                               ),
                               color: Colors.orange.withOpacity(.5),
                               elevation: 5,
-                              margin: EdgeInsets.all(8),
+                              margin: EdgeInsets.all(12),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100)),
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                             width: 100,
                           ),
@@ -176,7 +179,7 @@ class DashboardWidget extends StatelessWidget {
                               elevation: 5,
                               margin: EdgeInsets.all(8),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100)),
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                             width: 100,
                           ),
@@ -267,12 +270,34 @@ class DashboardWidget extends StatelessWidget {
                     children: <Widget>[
                       ExpansionTile(
                         title: ListTile(
-                          leading: Icon(
-                            Icons.person,
-                            color: Colors.orange,
-                          ),
+                          leading: (() {
+                            if (orangeVRMLTeamInfo.containsKey('count') &&
+                                orangeVRMLTeamInfo['count'] > 1) {
+                              return Container(
+                                  child: Image.network(
+                                orangeVRMLTeamInfo['team_logo'],
+                              ));
+                            } else {
+                              return Icon(
+                                Icons.person,
+                                color: Colors.orange,
+                              );
+                            }
+                          }()),
+                          // trailing: Row(
+                          //     mainAxisAlignment: MainAxisAlignment.end,
+                          //     children: [
+                          //       Text("Ignite"),
+                          //       Image.network(
+                          //         "https://vrmasterleague.com/images/logos/teams/09093858-5626-404d-97a3-10b8353fcc47.png",
+                          //         height: 50,
+                          //       ),
+                          //     ]),
                           // tileColor: Colors.orange,
-                          title: Text('Orange Team'),
+                          title: Text(
+                            'Orange Team',
+                            style: TextStyle(color: Colors.orange),
+                          ),
                           subtitle: Text(() {
                             if (frame.teams[0].players != null) {
                               return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
@@ -319,11 +344,24 @@ class DashboardWidget extends StatelessWidget {
                     children: <Widget>[
                       ExpansionTile(
                         title: ListTile(
-                          leading: Icon(
-                            Icons.person,
-                            color: Colors.blue,
+                          leading: (() {
+                            if (blueVRMLTeamInfo.containsKey('count') &&
+                                blueVRMLTeamInfo['count'] > 1) {
+                              return Container(
+                                  child: Image.network(
+                                blueVRMLTeamInfo['team_logo'],
+                              ));
+                            } else {
+                              return Icon(
+                                Icons.person,
+                                color: Colors.blue,
+                              );
+                            }
+                          }()),
+                          title: Text(
+                            'Blue Team',
+                            style: TextStyle(color: Colors.blue),
                           ),
-                          title: Text('Blue Team'),
                           subtitle: Text(() {
                             if (frame.teams[1].players != null) {
                               return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
@@ -332,6 +370,7 @@ class DashboardWidget extends StatelessWidget {
                             }
                           }()),
                         ),
+                        textColor: Colors.blue,
                         children: [
                           DataTable(
                             columns: const <DataColumn>[

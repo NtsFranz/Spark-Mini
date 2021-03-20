@@ -68,8 +68,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   Timer timer;
 
   static APIFrame lastFrame = APIFrame();
-  static String lastIP = '';
   Map<String, dynamic> lastIPLocationResponse = Map<String, dynamic>();
+  Map<String, dynamic> orangeVRMLTeamInfo = Map<String, dynamic>();
+  Map<String, dynamic> blueVRMLTeamInfo = Map<String, dynamic>();
   // SharedPreferences prefs;
   // Settings settings = new Settings();
 
@@ -85,16 +86,22 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(Duration(seconds: 1), (Timer t) => fetchAPI());
+    // timer = Timer.periodic(Duration(seconds: 1), (Timer t) => fetchAPI());
     getEchoVRIP();
   }
 
   Future<void> getEchoVRIP() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
-    setState(() {
-      echoVRIP = newEchoVRIP;
-    });
+    try {
+      String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
+      setState(() {
+        echoVRIP = newEchoVRIP;
+      });
+    } catch (Exception) {
+      setState(() {
+        echoVRIP = '127.0.0.1';
+      });
+    }
   }
 
   Future<void> setEchoVRIP(String value) async {
@@ -123,13 +130,31 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         // then parse the JSON.
         // setState(() {
         try {
-          lastFrame = APIFrame.fromJson(jsonDecode(response.body));
-          if (lastIP != lastFrame.sessionip) {
-            getIPAPI(lastFrame.sessionip);
-            lastIP = lastFrame.sessionip;
+          var newFrame = APIFrame.fromJson(jsonDecode(response.body));
+
+          try {
+            // switched match
+            if (lastFrame.sessionid == null ||
+                lastFrame.sessionip != newFrame.sessionip) {
+              //getIPAPI(newFrame.sessionip);
+            }
+
+            // player joined or left (or switched match)
+            for (int i = 0; i < 2; i++) {
+              if (lastFrame.sessionid == null ||
+                  lastFrame.sessionip != newFrame.sessionip ||
+                  lastFrame.teams[i].players.length !=
+                      newFrame.teams[i].players.length) {
+                getTeamnameFromPlayerList(
+                    newFrame.teams[i].players.map<String>((p) => p.name).toList(), i);
+              }
+            }
+          } catch (Exception) {
+            print('Failed to process API data');
           }
+          lastFrame = newFrame;
         } catch (Exception) {
-          print('Failed to parse API data');
+          print('Failed to parse API response');
         }
         // });
       } else {
@@ -155,6 +180,29 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       // If the server did not return a 200 OK response,
       // then throw an exception.
       throw Exception('Failed to get game data');
+    }
+  }
+
+  void getTeamnameFromPlayerList(List<String> players, int teamIndex) async {
+    final response = await http.get(Uri.https(
+        'ignitevr.gg',
+        'cgi-bin/EchoStats.cgi/get_team_name_from_list',
+        {'player_list': '${jsonEncode(players)}'}));
+
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response,
+      // then parse the JSON.
+      setState(() {
+        if (teamIndex == 0) {
+          orangeVRMLTeamInfo = jsonDecode(response.body);
+        } else if (teamIndex == 1) {
+          blueVRMLTeamInfo = jsonDecode(response.body);
+        }
+      });
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+      throw Exception('Failed to get player team info');
     }
   }
 
@@ -193,7 +241,8 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     ];
 
     List<Widget> _tabViews = [
-      DashboardWidget(lastFrame, lastIPLocationResponse),
+      DashboardWidget(lastFrame, lastIPLocationResponse, orangeVRMLTeamInfo,
+          blueVRMLTeamInfo),
       // AtlasWidget(
       //   frame: lastFrame,
       //   setAtlasLinkStyle: setAtlasLinkStyle,
@@ -212,7 +261,17 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       floatingActionButton: Consumer<Settings>(
         builder: (context, settings, child) => FloatingActionButton(
           onPressed: () {
-            fetchAPI();
+            setState(() {
+              fetchAPI();
+              getIPAPI(lastFrame.sessionip);
+              for (int i = 0; i < 2; i++) {
+                getTeamnameFromPlayerList(
+                    lastFrame.teams[i].players
+                        .map<String>((p) => p.name)
+                        .toList(),
+                    i);
+              }
+            });
           },
           child: const Icon(Icons.refresh),
           tooltip: "Refresh Data",
@@ -274,7 +333,7 @@ class Settings with ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setInt('atlasLinkStyle', atlasLinkStyle);
     prefs.setBool('atlasLinkUseAngleBrackets', atlasLinkUseAngleBrackets);
-    prefs.setBool('echoVRIP', atlasLinkAppendTeamNames);
+    prefs.setBool('atlasLinkAppendTeamNames', atlasLinkAppendTeamNames);
   }
 
   Future<void> load() async {
