@@ -1,4 +1,4 @@
-package com.example.ignitebot_flutter
+package gg.ignitevr.spark_mini
 
 import io.flutter.embedding.android.FlutterActivity
 
