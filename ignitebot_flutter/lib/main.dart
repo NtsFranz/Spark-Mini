@@ -1,10 +1,6 @@
 import 'dart:developer';
-import 'dart:isolate';
-
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'package:animations/animations.dart';
-import 'package:settings_ui/settings_ui.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'SettingsWidget.dart';
@@ -12,7 +8,6 @@ import 'ColorPage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:convert';
-import 'package:desktop_window/desktop_window.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -25,14 +20,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IgniteBot Lite',
+      title: 'Spark Mini',
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: Colors.red,
         accentColor: Colors.orangeAccent,
       ),
       home: MyHomePage(
-        title: 'IgniteBot Lite',
+        title: 'Spark Mini',
         restorationId: 'root',
       ),
     );
@@ -146,7 +141,10 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
                   lastFrame.teams[i].players.length !=
                       newFrame.teams[i].players.length) {
                 getTeamnameFromPlayerList(
-                    newFrame.teams[i].players.map<String>((p) => p.name).toList(), i);
+                    newFrame.teams[i].players
+                        .map<String>((p) => p.name)
+                        .toList(),
+                    i);
               }
             }
           } catch (Exception) {
@@ -234,7 +232,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     var bottomNavigationItems = <BottomNavigationBarItem>[
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
-      // BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
+      BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
       BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
@@ -243,10 +241,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     List<Widget> _tabViews = [
       DashboardWidget(lastFrame, lastIPLocationResponse, orangeVRMLTeamInfo,
           blueVRMLTeamInfo),
-      // AtlasWidget(
-      //   frame: lastFrame,
-      //   setAtlasLinkStyle: setAtlasLinkStyle,
-      // ),
+      AtlasWidget(
+        frame: lastFrame,
+      ),
       ColorPage(Colors.yellow),
       SettingsWidget(echoVRIP, setEchoVRIP),
     ];
