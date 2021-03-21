@@ -81,7 +81,10 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   @override
   void initState() {
     super.initState();
-    // timer = Timer.periodic(Duration(seconds: 1), (Timer t) => fetchAPI());
+    timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+      fetchAPI();
+      setState(() {});
+    });
     getEchoVRIP();
   }
 
@@ -131,7 +134,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
             // switched match
             if (lastFrame.sessionid == null ||
                 lastFrame.sessionip != newFrame.sessionip) {
-              //getIPAPI(newFrame.sessionip);
+              getIPAPI(newFrame.sessionip);
             }
 
             // player joined or left (or switched match)
@@ -166,6 +169,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   }
 
   void getIPAPI(String ip) async {
+    print('Fetching from ip-api');
     final response = await http.get(Uri.http('ip-api.com', 'json/$ip'));
 
     if (response.statusCode == 200) {
@@ -233,7 +237,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
       BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
-      BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
+      // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
     ];
@@ -244,7 +248,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       AtlasWidget(
         frame: lastFrame,
       ),
-      ColorPage(Colors.yellow),
+      // ColorPage(Colors.yellow),
       SettingsWidget(echoVRIP, setEchoVRIP),
     ];
 
@@ -260,13 +264,20 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
           onPressed: () {
             setState(() {
               fetchAPI();
-              getIPAPI(lastFrame.sessionip);
-              for (int i = 0; i < 2; i++) {
-                getTeamnameFromPlayerList(
-                    lastFrame.teams[i].players
-                        .map<String>((p) => p.name)
-                        .toList(),
-                    i);
+              if (lastFrame.sessionid != null) {
+                getIPAPI(lastFrame.sessionip);
+                for (int i = 0; i < 2; i++) {
+                  getTeamnameFromPlayerList(
+                      lastFrame.teams[i].players
+                          .map<String>((p) => p.name)
+                          .toList(),
+                      i);
+                }
+              }
+
+              // TODO find a better place for this
+              if (lastFrame.client_name != null) {
+                settings.clientName = lastFrame.client_name;
               }
             });
           },
@@ -297,6 +308,7 @@ class Settings with ChangeNotifier {
   int atlasLinkStyle = 0;
   bool atlasLinkUseAngleBrackets = true;
   bool atlasLinkAppendTeamNames = false;
+  String clientName = ''; // doesn't need to notify others usually
 
   Settings() {
     log('recreate');
@@ -324,6 +336,60 @@ class Settings with ChangeNotifier {
     atlasLinkAppendTeamNames = value;
     notifyListeners();
     save();
+  }
+
+  String getFormattedLink(
+      String sessionid,
+      Map<String, dynamic> orangeVRMLTeamInfo,
+      Map<String, dynamic> blueVRMLTeamInfo) {
+    if (sessionid == null) sessionid = '**********************';
+
+    String link = "";
+
+    if (atlasLinkUseAngleBrackets) {
+      switch (atlasLinkStyle) {
+        case 0:
+          link = "<ignitebot://choose/$sessionid>";
+          break;
+        case 1:
+          link = "<atlas://j/$sessionid>";
+          break;
+        case 2:
+          link = "<atlas://s/$sessionid>";
+          break;
+      }
+    } else {
+      switch (atlasLinkStyle) {
+        case 0:
+          link = "ignitebot://choose/$sessionid";
+          break;
+        case 1:
+          link = "atlas://j/$sessionid";
+          break;
+        case 2:
+          link = "atlas://s/$sessionid";
+          break;
+      }
+    }
+
+    if (atlasLinkAppendTeamNames) {
+      String orangeName = '?';
+      String blueName = '?';
+      if (orangeVRMLTeamInfo != null &&
+          orangeVRMLTeamInfo.containsKey('team_name') &&
+          orangeVRMLTeamInfo['team_name'] != '') {
+        orangeName = orangeVRMLTeamInfo['team_name'];
+      }
+      if (blueVRMLTeamInfo != null &&
+          blueVRMLTeamInfo.containsKey('team_name') &&
+          blueVRMLTeamInfo['team_name'] != '') {
+        blueName = blueVRMLTeamInfo['team_name'];
+      }
+
+      link = "$link $orangeName vs $blueName";
+    }
+
+    return link;
   }
 
   Future<void> save() async {

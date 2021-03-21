@@ -31,8 +31,8 @@ class SettingsWidget extends StatelessWidget {
                               width: 125,
                               child: TextField(
                                 maxLength: 15,
-                                controller:
-                                    new TextEditingController(text: echoVRIP),
+                                // controller:
+                                //     new TextEditingController(text: echoVRIP),
                                 keyboardType: TextInputType.numberWithOptions(
                                     decimal: true),
                                 cursorColor: Theme.of(context).primaryColor,

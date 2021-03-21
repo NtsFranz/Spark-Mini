@@ -27,31 +27,29 @@ class DashboardWidget extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         children: <Widget>[
           Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15.0),
-            ),
+            // shape: RoundedRectangleBorder(
+            //   borderRadius: BorderRadius.circular(15.0),
+            // ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Consumer<Settings>(
                   builder: (context, settings, child) => ListTile(
-                    title: Text(getFormattedLink(
-                        frame.sessionid,
-                        settings.atlasLinkStyle,
-                        settings.atlasLinkUseAngleBrackets)),
+                    title: Text(settings.getFormattedLink(
+                        frame.sessionid, orangeVRMLTeamInfo, blueVRMLTeamInfo)),
                     subtitle: Text('Click to copy to clipboard'),
                     onTap: () {
-                      Clipboard.setData(new ClipboardData(
-                          text: getFormattedLink(
-                              frame.sessionid,
-                              settings.atlasLinkStyle,
-                              settings.atlasLinkUseAngleBrackets)));
+                      String link = settings.getFormattedLink(frame.sessionid,
+                          orangeVRMLTeamInfo, blueVRMLTeamInfo);
+                      Clipboard.setData(new ClipboardData(text: link));
+
+                      Scaffold.of(context).showSnackBar(SnackBar(
+                        content: Text(link),
+                      ));
                     },
                     onLongPress: () {
-                      Share.share(getFormattedLink(
-                          frame.sessionid,
-                          settings.atlasLinkStyle,
-                          settings.atlasLinkUseAngleBrackets));
+                      Share.share(settings.getFormattedLink(frame.sessionid,
+                          orangeVRMLTeamInfo, blueVRMLTeamInfo));
                     },
                   ),
                 )
@@ -84,7 +82,6 @@ class DashboardWidget extends StatelessWidget {
                       if (ipLocation != null && ipLocation['lat'] != null) {
                         double lat = ipLocation['lat'];
                         double lon = ipLocation['lon'];
-                        print('$lat $lon');
                         return Container(
                             height: 200,
                             child: FlutterMap(
@@ -231,6 +228,8 @@ class DashboardWidget extends StatelessWidget {
                                               DataCell(Text(p.ping.toString()))
                                             ]))
                                     .toList(),
+                                sortColumnIndex: 1,
+                                sortAscending: false,
                                 columnSpacing: 10,
                                 dataRowHeight: 35,
                                 headingRowHeight: 40,
@@ -249,6 +248,8 @@ class DashboardWidget extends StatelessWidget {
                                               DataCell(Text(p.name)),
                                             ]))
                                     .toList(),
+                                sortColumnIndex: 0,
+                                sortAscending: false,
                                 columnSpacing: 10,
                                 dataRowHeight: 35,
                                 headingRowHeight: 40,
@@ -521,46 +522,5 @@ class DashboardWidget extends StatelessWidget {
   static double variance(List<int> values) {
     double avg = values.reduce((a, b) => a + b) / values.length;
     return values.map((v) => (v - avg) * (v - avg)).reduce((a, b) => a + b);
-  }
-
-  String getFormattedLink(
-      String sessionid, int atlasLinkStyle, bool atlasLinkUseAngleBrackets) {
-    if (sessionid == null) sessionid = '**********************';
-
-    String link = "";
-
-    if (atlasLinkUseAngleBrackets) {
-      switch (atlasLinkStyle) {
-        case 0:
-          link = "<ignitebot://choose/$sessionid>";
-          break;
-        case 1:
-          link = "<atlas://j/$sessionid>";
-          break;
-        case 2:
-          link = "<atlas://s/$sessionid>";
-          break;
-      }
-    } else {
-      switch (atlasLinkStyle) {
-        case 0:
-          link = "ignitebot://choose/$sessionid";
-          break;
-        case 1:
-          link = "atlas://j/$sessionid";
-          break;
-        case 2:
-          link = "atlas://s/$sessionid";
-          break;
-      }
-    }
-
-    // if (atlasLinkAppendTeamNames) {
-    //   if (orangeTeamName != '' && blueTeamName != '') {
-    //     link = "$link ${orangeTeamName} vs ${blueTeamName}";
-    //   }
-    // }
-
-    return link;
   }
 }
