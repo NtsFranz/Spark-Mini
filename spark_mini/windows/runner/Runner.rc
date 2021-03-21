@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "A new Flutter project." "\0"
+            VALUE "CompanyName", "IgniteVR" "\0"
+            VALUE "FileDescription", "Non-windows version of Spark (previously IgniteBot)." "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "ignitebot_flutter" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2021 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "ignitebot_flutter.exe" "\0"
-            VALUE "ProductName", "ignitebot_flutter" "\0"
+            VALUE "InternalName", "spark_mini" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2021 ignitevr.gg. All rights reserved." "\0"
+            VALUE "OriginalFilename", "spark_mini.exe" "\0"
+            VALUE "ProductName", "spark_mini" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

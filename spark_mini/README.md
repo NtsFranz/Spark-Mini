@@ -1,4 +1,4 @@
-# ignitebot_flutter
+# Spark Mini
 
 A new Flutter project.
 
