@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
-project(ignitebot_flutter LANGUAGES CXX)
+project(spark_mini LANGUAGES CXX)
 
-set(BINARY_NAME "ignitebot_flutter")
+set(BINARY_NAME "spark_mini")
 
 cmake_policy(SET CMP0063 NEW)
 
