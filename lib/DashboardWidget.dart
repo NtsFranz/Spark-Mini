@@ -23,410 +23,430 @@ class DashboardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (frame != null && frame.sessionid != null) {
-      return ListView(
-        padding: const EdgeInsets.all(8),
-        children: <Widget>[
-          Card(
-            // shape: RoundedRectangleBorder(
-            //   borderRadius: BorderRadius.circular(15.0),
-            // ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Consumer<Settings>(
-                  builder: (context, settings, child) => ListTile(
-                    title: Text(settings.getFormattedLink(
-                        frame.sessionid, orangeVRMLTeamInfo, blueVRMLTeamInfo)),
-                    subtitle: Text('Click to copy to clipboard'),
-                    onTap: () {
-                      String link = settings.getFormattedLink(frame.sessionid,
-                          orangeVRMLTeamInfo, blueVRMLTeamInfo);
-                      Clipboard.setData(new ClipboardData(text: link));
+      return Scaffold(
+        body: ListView(
+          padding: const EdgeInsets.all(8),
+          children: <Widget>[
+            Card(
+              // shape: RoundedRectangleBorder(
+              //   borderRadius: BorderRadius.circular(15.0),
+              // ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Consumer<Settings>(
+                    builder: (context, settings, child) => ListTile(
+                      title: Text(settings.getFormattedLink(frame.sessionid,
+                          orangeVRMLTeamInfo, blueVRMLTeamInfo)),
+                      subtitle: Text('Click to copy to clipboard'),
+                      onTap: () {
+                        String link = settings.getFormattedLink(frame.sessionid,
+                            orangeVRMLTeamInfo, blueVRMLTeamInfo);
+                        Clipboard.setData(new ClipboardData(text: link));
 
-                      Scaffold.of(context).showSnackBar(SnackBar(
-                        content: Text(link),
-                      ));
-                    },
-                    onLongPress: () {
-                      Share.share(settings.getFormattedLink(frame.sessionid,
-                          orangeVRMLTeamInfo, blueVRMLTeamInfo));
-                    },
-                  ),
-                )
-              ],
-            ),
-          ),
-          Card(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ExpansionTile(
-                  title: ListTile(
-                    title: Text('Server Location'),
-                    subtitle: Text((() {
-                      if (frame != null) {
-                        if (ipLocation != null &&
-                            ipLocation['status'] == 'success') {
-                          return '${ipLocation['city']}, ${ipLocation['region']}';
-                        } else {
-                          return 'IP: ${frame.sessionip}';
-                        }
-                      } else {
-                        return '---';
-                      }
-                    })()),
-                    leading: Icon(Icons.map),
-                  ),
-                  children: [
-                    (() {
-                      if (ipLocation != null && ipLocation['lat'] != null) {
-                        double lat = ipLocation['lat'];
-                        double lon = ipLocation['lon'];
-                        return Container(
-                            height: 200,
-                            child: FlutterMap(
-                              options: MapOptions(
-                                  center: LatLng(lat, lon),
-                                  zoom: 3.5,
-                                  interactive: false),
-                              layers: [
-                                TileLayerOptions(
-                                    urlTemplate:
-                                        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                                    subdomains: ['a', 'b', 'c']),
-                                MarkerLayerOptions(
-                                  markers: [
-                                    Marker(
-                                      width: 10.0,
-                                      height: 10.0,
-                                      point: LatLng(lat, lon),
-                                      builder: (ctx) => Container(
-                                        margin: EdgeInsets.all(0.0),
-                                        decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            shape: BoxShape.circle),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ));
-                      } else {
-                        return Text('No location found');
-                      }
-                    }())
-                  ],
-                ),
-              ],
-            ),
-          ),
-          (() {
-            if (frame.match_type == "Social_2.0") {
-              return Card(
-                child:
-                    Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                  ListTile(
-                    title: Center(
-                        heightFactor: 2,
-                        child: Text(
-                          'In Lobby',
-                          textScaleFactor: 2,
-                        )),
+                        Scaffold.of(context).showSnackBar(SnackBar(
+                          content: Text(link),
+                        ));
+                      },
+                      onLongPress: () {
+                        Share.share(settings.getFormattedLink(frame.sessionid,
+                            orangeVRMLTeamInfo, blueVRMLTeamInfo));
+                      },
+                    ),
                   )
-                ]),
-              );
-            } else {
-              return Column(children: <Widget>[
-                // points and time
-                Card(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Row(
-                        children: [
-                          Container(
-                            child: Card(
-                              child: Text(
-                                '${frame.orange_points}',
-                                textScaleFactor: 2,
-                                textAlign: TextAlign.center,
-                              ),
-                              color: Colors.orange.withOpacity(.5),
-                              elevation: 5,
-                              margin: EdgeInsets.all(12),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                            width: 100,
-                          ),
-                          Expanded(
-                              child: Text(
-                            '${frame.game_clock_display}',
-                            textAlign: TextAlign.center,
+                ],
+              ),
+            ),
+            Card(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ExpansionTile(
+                    title: ListTile(
+                      title: Text('Server Location'),
+                      subtitle: Text((() {
+                        if (frame != null) {
+                          if (ipLocation != null &&
+                              ipLocation['status'] == 'success') {
+                            return '${ipLocation['city']}, ${ipLocation['region']}';
+                          } else {
+                            return 'IP: ${frame.sessionip}';
+                          }
+                        } else {
+                          return '---';
+                        }
+                      })()),
+                      leading: Icon(Icons.map),
+                    ),
+                    children: [
+                      (() {
+                        if (ipLocation != null && ipLocation['lat'] != null) {
+                          double lat = ipLocation['lat'];
+                          double lon = ipLocation['lon'];
+                          return Container(
+                              height: 200,
+                              child: FlutterMap(
+                                options: MapOptions(
+                                    center: LatLng(lat, lon),
+                                    zoom: 3.5,
+                                    interactive: false),
+                                layers: [
+                                  TileLayerOptions(
+                                      urlTemplate:
+                                          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                      subdomains: ['a', 'b', 'c']),
+                                  MarkerLayerOptions(
+                                    markers: [
+                                      Marker(
+                                        width: 10.0,
+                                        height: 10.0,
+                                        point: LatLng(lat, lon),
+                                        builder: (ctx) => Container(
+                                          margin: EdgeInsets.all(0.0),
+                                          decoration: BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ));
+                        } else {
+                          return Text('No location found');
+                        }
+                      }())
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            (() {
+              if (frame.match_type == "Social_2.0") {
+                return Card(
+                  child:
+                      Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                    ListTile(
+                      title: Center(
+                          heightFactor: 2,
+                          child: Text(
+                            'In Lobby',
                             textScaleFactor: 2,
                           )),
-                          Container(
-                            child: Card(
-                              child: Text(
-                                '${frame.blue_points}',
-                                textScaleFactor: 2,
-                                textAlign: TextAlign.center,
+                    )
+                  ]),
+                );
+              } else {
+                return Column(children: <Widget>[
+                  // points and time
+                  Card(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Row(
+                          children: [
+                            Container(
+                              child: Card(
+                                child: Text(
+                                  '${frame.orange_points}',
+                                  textScaleFactor: 2,
+                                  textAlign: TextAlign.center,
+                                ),
+                                color: Colors.orange.withOpacity(.5),
+                                elevation: 5,
+                                margin: EdgeInsets.all(12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
                               ),
-                              color: Colors.blue.withOpacity(.5),
-                              elevation: 5,
-                              margin: EdgeInsets.all(8),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                              width: 100,
                             ),
-                            width: 100,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // server score
-                Card(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ExpansionTile(
-                        title: ListTile(
-                          title: Text('Server Score'),
-                          subtitle: Text((() {
-                            if (frame.teams[0].players != null &&
-                                frame.teams[1].players != null) {
-                              double score = calculateServerScore(
-                                  frame.teams[0].players
-                                      .map<int>((p) => p.ping)
-                                      .toList(),
-                                  frame.teams[1].players
-                                      .map<int>((p) => p.ping)
-                                      .toList());
-                              if (score == -1) {
-                                return "No player's ping can be over 150";
-                              }
-                              return score.toStringAsFixed(2);
-                            } else {
-                              return 'Not enough players';
-                            }
-                          })()),
-                          trailing: Text('Player Pings'),
-                        ),
-                        children: [
-                          Row(
-                            children: [
-                              DataTable(
-                                columns: const <DataColumn>[
-                                  DataColumn(label: Text('Player Name')),
-                                  DataColumn(label: Text('Ping'))
-                                ],
-                                rows: frame.teams[0].players
-                                    .map<DataRow>((p) => DataRow(
-                                            cells: <DataCell>[
-                                              DataCell(Text(p.name)),
-                                              DataCell(Text(p.ping.toString()))
-                                            ]))
-                                    .toList(),
-                                sortColumnIndex: 1,
-                                sortAscending: false,
-                                columnSpacing: 10,
-                                dataRowHeight: 35,
-                                headingRowHeight: 40,
-                                headingTextStyle:
-                                    TextStyle(color: Colors.orange),
+                            Expanded(
+                                child: Text(
+                              '${frame.game_clock_display}',
+                              textAlign: TextAlign.center,
+                              textScaleFactor: 2,
+                            )),
+                            Container(
+                              child: Card(
+                                child: Text(
+                                  '${frame.blue_points}',
+                                  textScaleFactor: 2,
+                                  textAlign: TextAlign.center,
+                                ),
+                                color: Colors.blue.withOpacity(.5),
+                                elevation: 5,
+                                margin: EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
                               ),
-                              DataTable(
-                                columns: const <DataColumn>[
-                                  DataColumn(label: Text('Ping')),
-                                  DataColumn(label: Text('Player Name')),
-                                ],
-                                rows: frame.teams[1].players
-                                    .map<DataRow>(
-                                        (p) => DataRow(cells: <DataCell>[
-                                              DataCell(Text(p.ping.toString())),
-                                              DataCell(Text(p.name)),
-                                            ]))
-                                    .toList(),
-                                sortColumnIndex: 0,
-                                sortAscending: false,
-                                columnSpacing: 10,
-                                dataRowHeight: 35,
-                                headingRowHeight: 40,
-                                headingTextStyle: TextStyle(color: Colors.blue),
-                              )
-                            ],
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                          )
-                        ],
-                      )
-                    ],
+                              width: 100,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                // orange team members
-                Card(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ExpansionTile(
-                        title: ListTile(
-                          leading: (() {
-                            if (orangeVRMLTeamInfo.containsKey('count') &&
-                                orangeVRMLTeamInfo['count'] > 1) {
-                              return Container(
-                                  child: Image.network(
-                                orangeVRMLTeamInfo['team_logo'],
-                              ));
-                            } else {
-                              return Icon(
-                                Icons.person,
-                                color: Colors.orange,
-                              );
-                            }
-                          }()),
-                          // trailing: Row(
-                          //     mainAxisAlignment: MainAxisAlignment.end,
-                          //     children: [
-                          //       Text("Ignite"),
-                          //       Image.network(
-                          //         "https://vrmasterleague.com/images/logos/teams/09093858-5626-404d-97a3-10b8353fcc47.png",
-                          //         height: 50,
-                          //       ),
-                          //     ]),
-                          // tileColor: Colors.orange,
-                          title: Text(
-                            'Orange Team',
-                            style: TextStyle(color: Colors.orange),
+                  // server score
+                  Card(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        ExpansionTile(
+                          title: ListTile(
+                            title: Text('Server Score'),
+                            subtitle: Text((() {
+                              if (frame.teams[0].players != null &&
+                                  frame.teams[1].players != null) {
+                                double score = calculateServerScore(
+                                    frame.teams[0].players
+                                        .map<int>((p) => p.ping)
+                                        .toList(),
+                                    frame.teams[1].players
+                                        .map<int>((p) => p.ping)
+                                        .toList());
+                                if (score == -1) {
+                                  return "No player's ping can be over 150";
+                                }
+                                return score.toStringAsFixed(2);
+                              } else {
+                                return 'Not enough players';
+                              }
+                            })()),
+                            trailing: Text('Player Pings'),
                           ),
+                          children: [
+                            Row(
+                              children: [
+                                DataTable(
+                                  columns: const <DataColumn>[
+                                    DataColumn(label: Text('Player Name')),
+                                    DataColumn(label: Text('Ping'))
+                                  ],
+                                  rows: frame.teams[0].players
+                                      .map<DataRow>((p) =>
+                                          DataRow(cells: <DataCell>[
+                                            DataCell(Text(p.name)),
+                                            DataCell(Text(p.ping.toString()))
+                                          ]))
+                                      .toList(),
+                                  sortColumnIndex: 1,
+                                  sortAscending: false,
+                                  columnSpacing: 10,
+                                  dataRowHeight: 35,
+                                  headingRowHeight: 40,
+                                  headingTextStyle:
+                                      TextStyle(color: Colors.orange),
+                                ),
+                                DataTable(
+                                  columns: const <DataColumn>[
+                                    DataColumn(label: Text('Ping')),
+                                    DataColumn(label: Text('Player Name')),
+                                  ],
+                                  rows: frame.teams[1].players
+                                      .map<DataRow>((p) =>
+                                          DataRow(cells: <DataCell>[
+                                            DataCell(Text(p.ping.toString())),
+                                            DataCell(Text(p.name)),
+                                          ]))
+                                      .toList(),
+                                  sortColumnIndex: 0,
+                                  sortAscending: false,
+                                  columnSpacing: 10,
+                                  dataRowHeight: 35,
+                                  headingRowHeight: 40,
+                                  headingTextStyle:
+                                      TextStyle(color: Colors.blue),
+                                )
+                              ],
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  // orange team members
+                  Card(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        ExpansionTile(
+                          title: ListTile(
+                            leading: (() {
+                              if (orangeVRMLTeamInfo.containsKey('count') &&
+                                  orangeVRMLTeamInfo['count'] > 1) {
+                                return Container(
+                                    child: Image.network(
+                                  orangeVRMLTeamInfo['team_logo'],
+                                ));
+                              } else {
+                                return Icon(
+                                  Icons.person,
+                                  color: Colors.orange,
+                                );
+                              }
+                            }()),
+                            // trailing: Row(
+                            //     mainAxisAlignment: MainAxisAlignment.end,
+                            //     children: [
+                            //       Text("Ignite"),
+                            //       Image.network(
+                            //         "https://vrmasterleague.com/images/logos/teams/09093858-5626-404d-97a3-10b8353fcc47.png",
+                            //         height: 50,
+                            //       ),
+                            //     ]),
+                            // tileColor: Colors.orange,
+                            title: Text(
+                              'Orange Team',
+                              style: TextStyle(color: Colors.orange),
+                            ),
+                            subtitle: Text(() {
+                              if (frame.teams[0].players != null) {
+                                return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
+                              } else {
+                                return '';
+                              }
+                            }()),
+                          ),
+                          children: [
+                            DataTable(
+                              columns: const <DataColumn>[
+                                DataColumn(label: Text('Name')),
+                                DataColumn(label: Text('Points')),
+                                DataColumn(label: Text('Assists')),
+                                DataColumn(label: Text('Saves')),
+                                DataColumn(label: Text('Steals')),
+                                DataColumn(label: Text('Stuns')),
+                              ],
+                              rows: frame.teams[0].players
+                                  .map<DataRow>((p) =>
+                                      DataRow(cells: <DataCell>[
+                                        DataCell(Text(p.name)),
+                                        DataCell(
+                                            Text(p.stats.points.toString())),
+                                        DataCell(
+                                            Text(p.stats.assists.toString())),
+                                        DataCell(
+                                            Text(p.stats.saves.toString())),
+                                        DataCell(
+                                            Text(p.stats.steals.toString())),
+                                        DataCell(
+                                            Text(p.stats.stuns.toString())),
+                                      ]))
+                                  .toList(),
+                              columnSpacing: 10,
+                              dataRowHeight: 35,
+                              headingRowHeight: 40,
+                              headingTextStyle: TextStyle(color: Colors.orange),
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  // blue team members
+                  Card(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        ExpansionTile(
+                          title: ListTile(
+                            leading: (() {
+                              if (blueVRMLTeamInfo.containsKey('count') &&
+                                  blueVRMLTeamInfo['count'] > 1) {
+                                return Container(
+                                    child: Image.network(
+                                  blueVRMLTeamInfo['team_logo'],
+                                ));
+                              } else {
+                                return Icon(
+                                  Icons.person,
+                                  color: Colors.blue,
+                                );
+                              }
+                            }()),
+                            title: Text(
+                              'Blue Team',
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                            subtitle: Text(() {
+                              if (frame.teams[1].players != null) {
+                                return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
+                              } else {
+                                return '';
+                              }
+                            }()),
+                          ),
+                          textColor: Colors.blue,
+                          children: [
+                            DataTable(
+                              columns: const <DataColumn>[
+                                DataColumn(label: Text('Name')),
+                                DataColumn(label: Text('Points')),
+                                DataColumn(label: Text('Assists')),
+                                DataColumn(label: Text('Saves')),
+                                DataColumn(label: Text('Steals')),
+                                DataColumn(label: Text('Stuns')),
+                              ],
+                              rows: frame.teams[1].players
+                                  .map<DataRow>((p) =>
+                                      DataRow(cells: <DataCell>[
+                                        DataCell(Text(p.name)),
+                                        DataCell(
+                                            Text(p.stats.points.toString())),
+                                        DataCell(
+                                            Text(p.stats.assists.toString())),
+                                        DataCell(
+                                            Text(p.stats.saves.toString())),
+                                        DataCell(
+                                            Text(p.stats.steals.toString())),
+                                        DataCell(
+                                            Text(p.stats.stuns.toString())),
+                                      ]))
+                                  .toList(),
+                              columnSpacing: 10,
+                              dataRowHeight: 35,
+                              headingRowHeight: 40,
+                              headingTextStyle: TextStyle(color: Colors.blue),
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  // spectators
+                  Card(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        ListTile(
+                          leading: Icon(Icons.camera),
+                          // tileColor: Colors.grey.withOpacity(.2),
+                          title: Text('Spectators'),
                           subtitle: Text(() {
-                            if (frame.teams[0].players != null) {
-                              return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
+                            if (frame.teams[2].players != null) {
+                              return '${frame.teams[2].players.map((p) => p.name).join('\n')}';
                             } else {
                               return '';
                             }
                           }()),
                         ),
-                        children: [
-                          DataTable(
-                            columns: const <DataColumn>[
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Points')),
-                              DataColumn(label: Text('Assists')),
-                              DataColumn(label: Text('Saves')),
-                              DataColumn(label: Text('Steals')),
-                              DataColumn(label: Text('Stuns')),
-                            ],
-                            rows: frame.teams[0].players
-                                .map<DataRow>((p) => DataRow(cells: <DataCell>[
-                                      DataCell(Text(p.name)),
-                                      DataCell(Text(p.stats.points.toString())),
-                                      DataCell(
-                                          Text(p.stats.assists.toString())),
-                                      DataCell(Text(p.stats.saves.toString())),
-                                      DataCell(Text(p.stats.steals.toString())),
-                                      DataCell(Text(p.stats.stuns.toString())),
-                                    ]))
-                                .toList(),
-                            columnSpacing: 10,
-                            dataRowHeight: 35,
-                            headingRowHeight: 40,
-                            headingTextStyle: TextStyle(color: Colors.orange),
-                          )
-                        ],
-                      )
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                // blue team members
-                Card(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ExpansionTile(
-                        title: ListTile(
-                          leading: (() {
-                            if (blueVRMLTeamInfo.containsKey('count') &&
-                                blueVRMLTeamInfo['count'] > 1) {
-                              return Container(
-                                  child: Image.network(
-                                blueVRMLTeamInfo['team_logo'],
-                              ));
-                            } else {
-                              return Icon(
-                                Icons.person,
-                                color: Colors.blue,
-                              );
-                            }
-                          }()),
-                          title: Text(
-                            'Blue Team',
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                          subtitle: Text(() {
-                            if (frame.teams[1].players != null) {
-                              return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
-                            } else {
-                              return '';
-                            }
-                          }()),
-                        ),
-                        textColor: Colors.blue,
-                        children: [
-                          DataTable(
-                            columns: const <DataColumn>[
-                              DataColumn(label: Text('Name')),
-                              DataColumn(label: Text('Points')),
-                              DataColumn(label: Text('Assists')),
-                              DataColumn(label: Text('Saves')),
-                              DataColumn(label: Text('Steals')),
-                              DataColumn(label: Text('Stuns')),
-                            ],
-                            rows: frame.teams[1].players
-                                .map<DataRow>((p) => DataRow(cells: <DataCell>[
-                                      DataCell(Text(p.name)),
-                                      DataCell(Text(p.stats.points.toString())),
-                                      DataCell(
-                                          Text(p.stats.assists.toString())),
-                                      DataCell(Text(p.stats.saves.toString())),
-                                      DataCell(Text(p.stats.steals.toString())),
-                                      DataCell(Text(p.stats.stuns.toString())),
-                                    ]))
-                                .toList(),
-                            columnSpacing: 10,
-                            dataRowHeight: 35,
-                            headingRowHeight: 40,
-                            headingTextStyle: TextStyle(color: Colors.blue),
-                          )
-                        ],
-                      )
-                    ],
-                  ),
-                ),
-                // spectators
-                Card(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ListTile(
-                        leading: Icon(Icons.camera),
-                        // tileColor: Colors.grey.withOpacity(.2),
-                        title: Text('Spectators'),
-                        subtitle: Text(() {
-                          if (frame.teams[2].players != null) {
-                            return '${frame.teams[2].players.map((p) => p.name).join('\n')}';
-                          } else {
-                            return '';
-                          }
-                        }()),
-                      ),
-                    ],
-                  ),
-                ),
-              ]);
-            }
-          }()),
-        ],
+                ]);
+              }
+            }()),
+          ],
+        ),
+        floatingActionButton: Consumer<Settings>(
+          builder: (context, settings, child) => FloatingActionButton(
+            onPressed: () {},
+            child: const Icon(Icons.refresh),
+            tooltip: "Refresh Data",
+          ),
+        ),
       );
     } else {
       return Center(

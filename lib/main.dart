@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:ffi';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'AtlasWidget.dart';
@@ -247,9 +248,10 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
           blueVRMLTeamInfo),
       AtlasWidget(
         frame: lastFrame,
+        ipLocation: lastIPLocationResponse,
       ),
       // ColorPage(Colors.yellow),
-      SettingsWidget(echoVRIP, setEchoVRIP),
+      SettingsWidget(echoVRIP: echoVRIP, setEchoVRIP: setEchoVRIP),
     ];
 
     return Scaffold(
@@ -259,32 +261,6 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         title: Text(widget.title),
       ),
       body: _tabViews[_currentPage.value],
-      floatingActionButton: Consumer<Settings>(
-        builder: (context, settings, child) => FloatingActionButton(
-          onPressed: () {
-            setState(() {
-              fetchAPI();
-              if (lastFrame.sessionid != null) {
-                getIPAPI(lastFrame.sessionip);
-                for (int i = 0; i < 2; i++) {
-                  getTeamnameFromPlayerList(
-                      lastFrame.teams[i].players
-                          .map<String>((p) => p.name)
-                          .toList(),
-                      i);
-                }
-              }
-
-              // TODO find a better place for this
-              if (lastFrame.client_name != null) {
-                settings.clientName = lastFrame.client_name;
-              }
-            });
-          },
-          child: const Icon(Icons.refresh),
-          tooltip: "Refresh Data",
-        ),
-      ),
       bottomNavigationBar: BottomNavigationBar(
         showUnselectedLabels: true,
         items: bottomNavigationItems,
@@ -349,7 +325,7 @@ class Settings with ChangeNotifier {
     if (atlasLinkUseAngleBrackets) {
       switch (atlasLinkStyle) {
         case 0:
-          link = "<ignitebot://choose/$sessionid>";
+          link = "<spark://choose/$sessionid>";
           break;
         case 1:
           link = "<atlas://j/$sessionid>";
@@ -361,7 +337,7 @@ class Settings with ChangeNotifier {
     } else {
       switch (atlasLinkStyle) {
         case 0:
-          link = "ignitebot://choose/$sessionid";
+          link = "spark://choose/$sessionid";
           break;
         case 1:
           link = "atlas://j/$sessionid";
@@ -411,9 +387,12 @@ class Settings with ChangeNotifier {
 }
 
 class APIFrame {
-  final String sessionip;
   final String sessionid;
+  final String sessionip;
+  final String game_status;
+  final double game_clock;
   final String match_type;
+  final bool private_match;
   final String client_name;
   final String game_clock_display;
   final int blue_points;
@@ -422,9 +401,12 @@ class APIFrame {
   final Map<String, dynamic> raw;
 
   APIFrame({
-    this.sessionip,
     this.sessionid,
+    this.sessionip,
+    this.game_status,
+    this.game_clock,
     this.match_type,
+    this.private_match,
     this.client_name,
     this.game_clock_display,
     this.blue_points,
@@ -438,6 +420,9 @@ class APIFrame {
       sessionid: json['sessionid'],
       sessionip: json['sessionip'],
       match_type: json['match_type'],
+      game_status: json['game_status'],
+      game_clock: json['game_clock'],
+      private_match: json['private_match'],
       client_name: json['client_name'],
       game_clock_display: json['game_clock_display'],
       blue_points: json['blue_points'],

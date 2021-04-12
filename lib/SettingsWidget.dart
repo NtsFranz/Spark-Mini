@@ -4,13 +4,18 @@ import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'main.dart';
 
-class SettingsWidget extends StatelessWidget {
+class SettingsWidget extends StatefulWidget {
   final setEchoVRIP;
   final String echoVRIP;
-  SettingsWidget(this.echoVRIP, this.setEchoVRIP);
+  SettingsWidget({Key key, this.echoVRIP, this.setEchoVRIP}) : super(key: key);
 
   final List<String> linkTypes = <String>['Choose', 'Player', 'Spectator'];
 
+  @override
+  State<StatefulWidget> createState() => SettingsState();
+}
+
+class SettingsState extends State<SettingsWidget> {
   @override
   Widget build(BuildContext context) {
     return ListView(padding: const EdgeInsets.all(12), children: <Widget>[
@@ -24,7 +29,7 @@ class SettingsWidget extends StatelessWidget {
                       tiles: [
                         SettingsTile(
                             title: 'Quest IP Address',
-                            subtitle: echoVRIP,
+                            subtitle: widget.echoVRIP,
                             leading: Icon(Icons.wifi_rounded),
                             onPressed: (BuildContext context) {},
                             trailing: Container(
@@ -52,7 +57,7 @@ class SettingsWidget extends StatelessWidget {
                                 ),
                                 textInputAction: TextInputAction.done,
                                 onSubmitted: (value) {
-                                  setEchoVRIP(value);
+                                  widget.setEchoVRIP(value);
                                 },
                               ),
                             )),
@@ -65,8 +70,8 @@ class SettingsWidget extends StatelessWidget {
                             title: 'Link Type',
                             subtitle: 'Join as spectator or player',
                             trailing: DropdownButton<String>(
-                                value: linkTypes[settings.atlasLinkStyle],
-                                items: linkTypes.map((value) {
+                                value: widget.linkTypes[settings.atlasLinkStyle],
+                                items: widget.linkTypes.map((value) {
                                   return DropdownMenuItem<String>(
                                     value: value,
                                     child: Text(value),
@@ -74,7 +79,7 @@ class SettingsWidget extends StatelessWidget {
                                 }).toList(),
                                 onChanged: (value) => {
                                       settings.setAtlasLinkStyle(
-                                          linkTypes.indexOf(value))
+                                          widget.linkTypes.indexOf(value))
                                     })),
                         SettingsTile.switchTile(
                           title: 'Surround with <>',
