@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="gg.ignitevr.spark_mini">
+   <uses-permission android:name="android.permission.INTERNET" />
    <application
         android:label="Spark Mini"
         android:icon="@mipmap/launcher_icon"

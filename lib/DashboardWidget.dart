@@ -440,13 +440,13 @@ class DashboardWidget extends StatelessWidget {
             }()),
           ],
         ),
-        floatingActionButton: Consumer<Settings>(
-          builder: (context, settings, child) => FloatingActionButton(
-            onPressed: () {},
-            child: const Icon(Icons.refresh),
-            tooltip: "Refresh Data",
-          ),
-        ),
+        // floatingActionButton: Consumer<Settings>(
+        //   builder: (context, settings, child) => FloatingActionButton(
+        //     onPressed: () {},
+        //     child: const Icon(Icons.refresh),
+        //     tooltip: "Refresh Data",
+        //   ),
+        // ),
       );
     } else {
       return Center(
