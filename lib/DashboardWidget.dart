@@ -378,7 +378,6 @@ class DashboardWidget extends StatelessWidget {
                               }
                             }()),
                           ),
-                          textColor: Colors.blue,
                           children: [
                             DataTable(
                               columns: const <DataColumn>[

@@ -8,10 +8,18 @@ import 'SettingsWidget.dart';
 import 'ColorPage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'dart:io';
+import 'package:window_size/window_size.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    setWindowTitle("Spark Mini");
+    setWindowMinSize(Size(375, 750));
+    setWindowMaxSize(Size(600, 1000));
+  }
   runApp(
       ChangeNotifierProvider(create: (context) => Settings(), child: MyApp()));
 }
