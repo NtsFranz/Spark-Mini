@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:ffi';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:spark_mini/IgniteStatsWidget.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'SettingsWidget.dart';
@@ -90,10 +91,10 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
-      fetchAPI();
-      setState(() {});
-    });
+    // timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+    //   fetchAPI();
+    //   setState(() {});
+    // });
     getEchoVRIP();
   }
 
@@ -248,6 +249,8 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
       // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       BottomNavigationBarItem(
+          icon: const Icon(Icons.web), label: "Ignite Stats"),
+      BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
     ];
 
@@ -258,6 +261,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         frame: lastFrame,
         ipLocation: lastIPLocationResponse,
       ),
+      IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
       SettingsWidget(echoVRIP: echoVRIP, setEchoVRIP: setEchoVRIP),
     ];
@@ -276,7 +280,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         type: BottomNavigationBarType.fixed,
         // selectedItemColor: colorScheme.onPrimary,
         // unselectedItemColor: colorScheme.onPrimary.withOpacity(.5),
-        // backgroundColor: colorScheme.primary,
+        backgroundColor: Colors.white10,
         onTap: (index) {
           setState(() {
             _currentPage.value = index;
@@ -333,7 +337,7 @@ class Settings with ChangeNotifier {
     if (atlasLinkUseAngleBrackets) {
       switch (atlasLinkStyle) {
         case 0:
-          link = "<spark://choose/$sessionid>";
+          link = "<spark://c/$sessionid>";
           break;
         case 1:
           link = "<atlas://j/$sessionid>";
@@ -345,7 +349,7 @@ class Settings with ChangeNotifier {
     } else {
       switch (atlasLinkStyle) {
         case 0:
-          link = "spark://choose/$sessionid";
+          link = "spark://c/$sessionid";
           break;
         case 1:
           link = "atlas://j/$sessionid";
