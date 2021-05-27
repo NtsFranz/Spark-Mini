@@ -449,7 +449,14 @@ class DashboardWidget extends StatelessWidget {
       );
     } else {
       return Center(
-        child: Text("Not Connected."),
+        child: Container(
+          padding: EdgeInsets.all(20),
+          child: Text(
+            "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
+            textScaleFactor: 1.3,
+            textAlign: TextAlign.center,
+          ),
+        ),
       );
     }
   }

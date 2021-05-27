@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'igniteStatsPlayer.dart';
+part of 'IgniteStatsPlayer.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator

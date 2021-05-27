@@ -1,7 +1,6 @@
-
 import 'package:json_annotation/json_annotation.dart';
 
-part 'igniteStatsPlayer.g.dart';
+part 'IgniteStatsPlayer.g.dart';
 
 @JsonSerializable()
 class IgniteStatsPlayer {
@@ -60,8 +59,9 @@ class IgniteStatsPlayer {
       this.total_stuns,
       this.total_wins});
 
-      factory IgniteStatsPlayer.fromJson(Map<String,dynamic> json)=> _$IgniteStatsPlayerFromJson(json);
-      Map<String,dynamic>toJson() => _$IgniteStatsPlayerToJson(this);
+  factory IgniteStatsPlayer.fromJson(Map<String, dynamic> json) =>
+      _$IgniteStatsPlayerFromJson(json);
+  Map<String, dynamic> toJson() => _$IgniteStatsPlayerToJson(this);
 }
 
 // class IgniteStatsVRMLPlayer {

@@ -1,12 +1,10 @@
 import 'dart:developer';
-import 'dart:ffi';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:spark_mini/IgniteStatsWidget.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'SettingsWidget.dart';
-import 'ColorPage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:io';
@@ -280,7 +278,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         type: BottomNavigationBarType.fixed,
         // selectedItemColor: colorScheme.onPrimary,
         // unselectedItemColor: colorScheme.onPrimary.withOpacity(.5),
-        backgroundColor: Colors.white10,
+        // backgroundColor: Colors.white10,
         onTap: (index) {
           setState(() {
             _currentPage.value = index;

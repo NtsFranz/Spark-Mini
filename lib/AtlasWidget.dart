@@ -20,12 +20,14 @@ class AtlasState extends State<AtlasWidget> {
   final List<String> linkTypes = <String>['Choose', 'Player', 'Spectator'];
   Map<String, dynamic> ogAtlasMatches;
   Map<String, dynamic> igniteAtlasMatches;
+  bool fetchingIgniteAtlas = false;
+  bool fetchingOGAtlas = false;
 
   @override
   void initState() {
     super.initState();
     fetchIgniteAtlasMatches(widget.frame.client_name);
-    fetchIgniteAtlasMatches(widget.frame.client_name);
+    fetchOGAtlasMatches(widget.frame.client_name);
   }
 
   @override
@@ -64,9 +66,21 @@ class AtlasState extends State<AtlasWidget> {
               );
             } else {
               return Container(
-                child: Center(child: Text('Not in Match')),
-                margin: EdgeInsets.all(15),
+                child: Center(
+                    child: Text(
+                  'Not in Match.\n\nWhen you are in a private match, you can host a your match here for others to see.',
+                  textScaleFactor: 1.3,
+                  textAlign: TextAlign.center,
+                )),
+                margin: EdgeInsets.all(20),
               );
+            }
+          }()),
+          (() {
+            if (fetchingIgniteAtlas || fetchingOGAtlas) {
+              return Center(child: const CircularProgressIndicator());
+            } else {
+              return Container();
             }
           }()),
           (() {
@@ -220,14 +234,19 @@ class AtlasState extends State<AtlasWidget> {
   }
 
   void fetchOGAtlasMatches(String playerName) async {
+    setState(() {
+      fetchingOGAtlas = true;
+    });
     final response = await http.post(
         Uri.https('echovrconnect.appspot.com', 'api/v1/player/$playerName'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
+      if (!mounted) return;
       setState(() {
         ogAtlasMatches = jsonDecode(response.body);
+        fetchingOGAtlas = false;
       });
     } else {
       // If the server did not return a 200 OK response,
@@ -237,14 +256,19 @@ class AtlasState extends State<AtlasWidget> {
   }
 
   void fetchIgniteAtlasMatches(String playerName) async {
+    setState(() {
+      fetchingIgniteAtlas = true;
+    });
     final response = await http.get(Uri.https(
         'ignitevr.gg', 'cgi-bin/EchoStats.cgi/atlas_matches_v2/$playerName'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
+      if (!mounted) return;
       setState(() {
         igniteAtlasMatches = jsonDecode(response.body);
+        fetchingIgniteAtlas = false;
       });
     } else {
       // If the server did not return a 200 OK response,
