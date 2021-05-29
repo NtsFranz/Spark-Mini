@@ -89,10 +89,10 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   @override
   void initState() {
     super.initState();
-    // timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
-    //   fetchAPI();
-    //   setState(() {});
-    // });
+    timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+      fetchAPI();
+      setState(() {});
+    });
     getEchoVRIP();
   }
 
@@ -408,6 +408,7 @@ class APIFrame {
   final int blue_points;
   final int orange_points;
   final List<APITeam> teams;
+  final APILastThrow last_throw;
   final Map<String, dynamic> raw;
 
   APIFrame({
@@ -421,6 +422,7 @@ class APIFrame {
     this.game_clock_display,
     this.blue_points,
     this.orange_points,
+    this.last_throw,
     this.teams,
     this.raw,
   });
@@ -440,6 +442,7 @@ class APIFrame {
       teams: json['teams']
           .map<APITeam>((teamJSON) => APITeam.fromJson(teamJSON))
           .toList(),
+      last_throw: APILastThrow.fromJson(json['last_throw']),
       raw: json,
     );
   }
@@ -512,6 +515,55 @@ class APIStats {
       blocks: json['blocks'],
       assists: json['assists'],
       shots_taken: json['shots_taken'],
+    );
+  }
+}
+
+class APILastThrow {
+  final double arm_speed;
+  final double total_speed;
+  final double off_axis_spin_deg;
+  final double wrist_throw_penalty;
+  final double rot_per_sec;
+  final double pot_speed_from_rot;
+  final double speed_from_arm;
+  final double speed_from_movement;
+  final double speed_from_wrist;
+  final double wrist_align_to_throw_deg;
+  final double throw_align_to_movement_deg;
+  final double off_axis_penalty;
+  final double throw_move_penalty;
+
+  APILastThrow(
+      {this.arm_speed,
+      this.total_speed,
+      this.off_axis_spin_deg,
+      this.wrist_throw_penalty,
+      this.rot_per_sec,
+      this.pot_speed_from_rot,
+      this.speed_from_arm,
+      this.speed_from_movement,
+      this.speed_from_wrist,
+      this.wrist_align_to_throw_deg,
+      this.throw_align_to_movement_deg,
+      this.off_axis_penalty,
+      this.throw_move_penalty});
+
+  factory APILastThrow.fromJson(Map<String, dynamic> json) {
+    return APILastThrow(
+      arm_speed: json['arm_speed'],
+      total_speed: json['total_speed'],
+      off_axis_spin_deg: json['off_axis_spin_deg'],
+      wrist_throw_penalty: json['wrist_throw_penalty'],
+      rot_per_sec: json['rot_per_sec'],
+      pot_speed_from_rot: json['pot_speed_from_rot'],
+      speed_from_arm: json['speed_from_arm'],
+      speed_from_movement: json['speed_from_movement'],
+      speed_from_wrist: json['speed_from_wrist'],
+      wrist_align_to_throw_deg: json['wrist_align_to_throw_deg'],
+      throw_align_to_movement_deg: json['throw_align_to_movement_deg'],
+      off_axis_penalty: json['off_axis_penalty'],
+      throw_move_penalty: json['throw_move_penal'],
     );
   }
 }

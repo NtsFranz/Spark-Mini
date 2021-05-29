@@ -68,7 +68,7 @@ class AtlasState extends State<AtlasWidget> {
               return Container(
                 child: Center(
                     child: Text(
-                  'Not in Match.\n\nWhen you are in a private match, you can host a your match here for others to see.',
+                  'Not in Match.\n\nWhen you are in a private match, you can post your match here for others to see.',
                   textScaleFactor: 1.3,
                   textAlign: TextAlign.center,
                 )),

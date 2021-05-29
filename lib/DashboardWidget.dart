@@ -186,6 +186,150 @@ class DashboardWidget extends StatelessWidget {
                       ],
                     ),
                   ),
+
+                  // Last throw
+                  Card(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        ExpansionTile(
+                          title: ListTile(
+                            title: Text('Last Throw'),
+                            subtitle: Text(frame.last_throw.total_speed
+                                    .toStringAsFixed(2) +
+                                ' m/s'),
+                            trailing: Column(
+                              children: [
+                                Text('Arm: ' +
+                                    frame.last_throw.speed_from_arm
+                                        .toStringAsFixed(2) +
+                                    ' m/s'),
+                                Text('Movement: ' +
+                                    frame.last_throw.speed_from_movement
+                                        .toStringAsFixed(2) +
+                                    ' m/s'),
+                                Text('Wrist: ' +
+                                    frame.last_throw.speed_from_wrist
+                                        .toStringAsFixed(2) +
+                                    ' m/s'),
+                              ],
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                            ),
+                          ),
+                          children: [
+                            DataTable(
+                              columns: const <DataColumn>[
+                                DataColumn(label: Text('Speeds')),
+                                DataColumn(label: Text('')),
+                              ],
+                              rows: <DataRow>[
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Total Speed')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.total_speed
+                                          .toStringAsFixed(2) +
+                                      ' m/s'))
+                                ]),
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Arm Speed')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.speed_from_arm
+                                          .toStringAsFixed(2) +
+                                      ' m/s'))
+                                ]),
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Wrist Speed')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.speed_from_wrist
+                                          .toStringAsFixed(2) +
+                                      ' m/s'))
+                                ]),
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Movement Speed')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.speed_from_movement
+                                          .toStringAsFixed(2) +
+                                      ' m/s'))
+                                ]),
+                              ],
+                              columnSpacing: 10,
+                              dataRowHeight: 35,
+                              headingRowHeight: 30,
+                              headingTextStyle: TextStyle(color: Colors.orange),
+                            ),
+                            DataTable(
+                              columns: const <DataColumn>[
+                                DataColumn(label: Text('Touch Data')),
+                                DataColumn(label: Text('')),
+                              ],
+                              rows: <DataRow>[
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Arm Speed')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.arm_speed
+                                          .toStringAsFixed(2) +
+                                      ' m/s'))
+                                ]),
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Rots/second')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.rot_per_sec
+                                          .toStringAsFixed(2) +
+                                      ' r/s'))
+                                ]),
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Pot spd from rot')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.pot_speed_from_rot
+                                          .toStringAsFixed(2) +
+                                      ' m/s'))
+                                ]),
+                              ],
+                              columnSpacing: 10,
+                              dataRowHeight: 35,
+                              headingRowHeight: 30,
+                              headingTextStyle: TextStyle(color: Colors.orange),
+                            ),
+                            DataTable(
+                              columns: const <DataColumn>[
+                                DataColumn(label: Text('Alignment Analysis')),
+                                DataColumn(label: Text('')),
+                              ],
+                              rows: <DataRow>[
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Off Axis Spin')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.off_axis_spin_deg
+                                          .toStringAsFixed(1) +
+                                      ' deg'))
+                                ]),
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Wrist align')),
+                                  DataCell(Text('' +
+                                      frame.last_throw.wrist_align_to_throw_deg
+                                          .toStringAsFixed(1) +
+                                      ' deg'))
+                                ]),
+                                DataRow(cells: <DataCell>[
+                                  DataCell(Text('Movement align')),
+                                  DataCell(Text('' +
+                                      frame.last_throw
+                                          .throw_align_to_movement_deg
+                                          .toStringAsFixed(1) +
+                                      ' deg'))
+                                ]),
+                              ],
+                              columnSpacing: 10,
+                              dataRowHeight: 35,
+                              headingRowHeight: 30,
+                              headingTextStyle: TextStyle(color: Colors.orange),
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+
                   // server score
                   Card(
                     child: Column(
