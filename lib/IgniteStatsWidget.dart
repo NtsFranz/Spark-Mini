@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:spark_mini/FlutterPlayercard.dart';
-import 'package:spark_mini/IgniteStatsPage.dart';
 import 'Keys.dart';
 import 'Model/IgniteStatsPlayer.dart';
 import 'dart:convert';
@@ -86,25 +84,25 @@ class IgniteStatsState extends State<IgniteStatsWidget> {
   Widget build(BuildContext context) {
     SizeConfig().init(context);
     return ListView(padding: const EdgeInsets.all(12), children: <Widget>[
-      SearchField(
-        suggestions: playerList,
-        hint: 'Search for a Player',
-        onTap: (value) {
-          setState(() {
-            playerName = value;
-          });
-        },
-      ),
+            Container(
+              child: SearchField(
+                suggestions: playerList,
+                hint: 'Search for a Player',
+                onTap: (value) {
+                  setState(() {
+                    playerName = value;
+                  });
+                },
+              ),
+            ),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     // fetchData('NtsFranz');
+            //     setState(() {});
+            //   },
+            //   child: const Icon(Icons.refresh),
+            // ),
       SizedBox(height: 30),
-      // ElevatedButton(
-      //   onPressed: () {
-      //     // fetchData('NtsFranz');
-      //     setState(() {
-      //       playerName =
-      //     });
-      //   },
-      //   child: const Icon(Icons.refresh),
-      // ),
       // IgniteStatsPage(playerDataMap),
       // FlutterPlayercard(),
       Container(
