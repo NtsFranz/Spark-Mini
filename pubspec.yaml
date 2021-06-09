@@ -1,5 +1,5 @@
 name: spark_mini
-description: Non-Windows version of Spark (formerly IgniteBot)
+description: Spark Mini
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
@@ -15,7 +15,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.1+3
+version: 1.0.2+4
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -49,8 +49,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   # flutter_launcher_icons: ^0.8.0
-  # msix: ^0.1.5
   flutter_native_splash: ^1.1.7+1
+  # msix: ^0.1.5
   build_runner:
   json_serializable: 3.5.1
 
@@ -58,6 +58,7 @@ flutter_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/icon/ignite_logo.png"
+  image_path_ios: "assets/icon/ignite_logo_ios.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
