@@ -19,90 +19,167 @@ class SettingsState extends State<SettingsWidget> {
   @override
   Widget build(BuildContext context) {
     return ListView(padding: const EdgeInsets.all(12), children: <Widget>[
-      Card(
-          child: Consumer<Settings>(
-              builder: (context, settings, child) =>
-                  Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                    SettingsSection(
-                      titlePadding: const EdgeInsets.all(8),
-                      title: 'Connection',
-                      tiles: [
-                        SettingsTile(
-                            title: 'Quest IP Address',
-                            subtitle: widget.echoVRIP,
-                            leading: Icon(Icons.wifi_rounded),
-                            onPressed: (BuildContext context) {},
-                            trailing: Container(
-                              width: 125,
-                              child: TextField(
-                                maxLength: 15,
-                                // controller:
-                                //     new TextEditingController(text: echoVRIP),
-                                keyboardType: TextInputType.numberWithOptions(
-                                    decimal: true),
-                                cursorColor: Theme.of(context).primaryColor,
-                                decoration: InputDecoration(
-                                  enabledBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(
-                                        color: Theme.of(context).primaryColor),
-                                  ),
-                                  focusedBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(
-                                        color: Theme.of(context).primaryColor),
-                                  ),
-                                  border: UnderlineInputBorder(
-                                    borderSide: BorderSide(
-                                        color: Theme.of(context).primaryColor),
-                                  ),
-                                ),
-                                textInputAction: TextInputAction.done,
-                                onSubmitted: (value) {
-                                  widget.setEchoVRIP(value);
-                                },
-                              ),
-                            )),
-                      ],
+      Card(child: Consumer<Settings>(builder: (context, settings, child) {
+        var inputDecoration = InputDecoration(
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+          ),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+          ),
+          border: UnderlineInputBorder(
+            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+          ),
+        );
+        return Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Card(
+            child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Connection"),
+                  Row(children: <Widget>[
+                    Expanded(
+                      child: ListTile(
+                        leading: Icon(Icons.wifi_rounded),
+                        title: Text("Quest IP Address"),
+                        subtitle: Text(widget.echoVRIP),
+                      ),
                     ),
-                    SettingsSection(
-                      title: 'Display',
-                      tiles: [
-                        SettingsTile(
-                            title: 'Link Type',
-                            subtitle: 'Join as spectator or player',
-                            trailing: DropdownButton<String>(
-                                value: widget.linkTypes[settings.atlasLinkStyle],
-                                items: widget.linkTypes.map((value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (value) => {
-                                      settings.setAtlasLinkStyle(
-                                          widget.linkTypes.indexOf(value))
-                                    })),
-                        SettingsTile.switchTile(
-                          title: 'Surround with <>',
-                          subtitle: 'Makes links clickable in Discord',
-                          switchValue: settings.atlasLinkUseAngleBrackets,
-                          switchActiveColor: Theme.of(context).primaryColor,
-                          onToggle: (bool value) {
-                            settings.setAtlasLinkUseAngleBrackets(value);
-                          },
-                        ),
-                        SettingsTile.switchTile(
-                          title: 'Append team names',
-                          subtitle:
-                              'Adds auto-detected VRML team names to the end',
-                          switchValue: settings.atlasLinkAppendTeamNames,
-                          switchActiveColor: Theme.of(context).primaryColor,
-                          onToggle: (bool value) {
-                            settings.setAtlasLinkAppendTeamNames(value);
-                          },
-                        ),
-                      ],
+                    Container(
+                      width: 125,
+                      child: TextField(
+                        maxLength: 15,
+                        // controller:
+                        //     new TextEditingController(text: echoVRIP),
+                        keyboardType:
+                            TextInputType.numberWithOptions(decimal: true),
+                        cursorColor: Theme.of(context).primaryColor,
+                        decoration: inputDecoration,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (value) {
+                          widget.setEchoVRIP(value);
+                        },
+                      ),
                     ),
-                  ])))
+                  ]),
+                  Text("Display"),
+                  Row(children: <Widget>[
+                    Expanded(
+                      child: ListTile(
+                        title: Text("Link Type"),
+                        subtitle: Text("Join as spectator or player"),
+                      ),
+                    ),
+                    DropdownButton<String>(
+                        value: widget.linkTypes[settings.atlasLinkStyle],
+                        items: widget.linkTypes.map((value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (value) => {
+                              settings.setAtlasLinkStyle(
+                                  widget.linkTypes.indexOf(value))
+                            })
+                  ]),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          title: Text("Surround with <>"),
+                          subtitle: Text("Makes links clickable in Discord"),
+                        ),
+                      ),
+                    ],
+                    //   switchValue: settings.atlasLinkUseAngleBrackets,
+                    //   switchActiveColor: Theme.of(context).primaryColor,
+                    //   onToggle: (bool value) {
+                    //     settings.setAtlasLinkUseAngleBrackets(value);
+                    //   },
+                    // ),
+                    // SettingsTile.switchTile(
+                    //   title: 'Append team names',
+                    //   subtitle: 'Adds auto-detected VRML team names to the end',
+                    //   switchValue: settings.atlasLinkAppendTeamNames,
+                    //   switchActiveColor: Theme.of(context).primaryColor,
+                    //   onToggle: (bool value) {
+                    //     settings.setAtlasLinkAppendTeamNames(value);
+                    //   },
+                    // }
+                  )
+                ],
+              )
+            ]),
+          ),
+          SettingsSection(
+            titlePadding: const EdgeInsets.all(8),
+            title: 'Connection',
+            tiles: [
+              SettingsTile(
+                  title: 'Quest IP Address',
+                  subtitle: widget.echoVRIP,
+                  leading: Icon(Icons.wifi_rounded),
+                  onPressed: (BuildContext context) {},
+                  trailing: Container(
+                    width: 125,
+                    child: TextField(
+                      maxLength: 15,
+                      // controller:
+                      //     new TextEditingController(text: echoVRIP),
+                      keyboardType:
+                          TextInputType.numberWithOptions(decimal: true),
+                      cursorColor: Theme.of(context).primaryColor,
+                      decoration: inputDecoration,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (value) {
+                        widget.setEchoVRIP(value);
+                      },
+                    ),
+                  )),
+            ],
+          ),
+          SettingsSection(
+            title: 'Display',
+            tiles: [
+              SettingsTile(
+                  title: 'Link Type',
+                  subtitle: 'Join as spectator or player',
+                  trailing: DropdownButton<String>(
+                      value: widget.linkTypes[settings.atlasLinkStyle],
+                      items: widget.linkTypes.map((value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (value) => {
+                            settings.setAtlasLinkStyle(
+                                widget.linkTypes.indexOf(value))
+                          })),
+              SettingsTile.switchTile(
+                title: 'Surround with <>',
+                subtitle: 'Makes links clickable in Discord',
+                switchValue: settings.atlasLinkUseAngleBrackets,
+                switchActiveColor: Theme.of(context).primaryColor,
+                onToggle: (bool value) {
+                  settings.setAtlasLinkUseAngleBrackets(value);
+                },
+              ),
+              SettingsTile.switchTile(
+                title: 'Append team names',
+                subtitle: 'Adds auto-detected VRML team names to the end',
+                switchValue: settings.atlasLinkAppendTeamNames,
+                switchActiveColor: Theme.of(context).primaryColor,
+                onToggle: (bool value) {
+                  settings.setAtlasLinkAppendTeamNames(value);
+                },
+              ),
+            ],
+          ),
+        ]);
+      }))
     ]);
   }
 }
