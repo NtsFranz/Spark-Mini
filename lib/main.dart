@@ -246,8 +246,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
       BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
       // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
-      BottomNavigationBarItem(
-          icon: const Icon(Icons.web), label: "Ignite Stats"),
+      // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
     ];
@@ -259,7 +258,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         frame: lastFrame,
         ipLocation: lastIPLocationResponse,
       ),
-      IgniteStatsWidget(),
+      // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
       SettingsWidget(echoVRIP: echoVRIP, setEchoVRIP: setEchoVRIP),
     ];

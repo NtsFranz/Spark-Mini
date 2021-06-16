@@ -37,7 +37,12 @@ class SettingsState extends State<SettingsWidget> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("Connection"),
+                  Text(
+                    "Connection",
+                    style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold),
+                  ),
                   Row(children: <Widget>[
                     Expanded(
                       child: ListTile(
@@ -62,8 +67,16 @@ class SettingsState extends State<SettingsWidget> {
                         },
                       ),
                     ),
+                    SizedBox(
+                      width: 20,
+                    ),
                   ]),
-                  Text("Display"),
+                  Text(
+                    "Display",
+                    style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold),
+                  ),
                   Row(children: <Widget>[
                     Expanded(
                       child: ListTile(
@@ -82,7 +95,10 @@ class SettingsState extends State<SettingsWidget> {
                         onChanged: (value) => {
                               settings.setAtlasLinkStyle(
                                   widget.linkTypes.indexOf(value))
-                            })
+                            }),
+                    SizedBox(
+                      width: 20,
+                    ),
                   ]),
                   Row(
                     children: [
@@ -92,91 +108,42 @@ class SettingsState extends State<SettingsWidget> {
                           subtitle: Text("Makes links clickable in Discord"),
                         ),
                       ),
+                      Switch(
+                        value: settings.atlasLinkUseAngleBrackets,
+                        onChanged: (bool value) {
+                          settings.setAtlasLinkUseAngleBrackets(value);
+                        },
+                        activeColor: Theme.of(context).primaryColor,
+                      ),
+                      SizedBox(
+                        width: 20,
+                      ),
                     ],
-                    //   switchValue: settings.atlasLinkUseAngleBrackets,
-                    //   switchActiveColor: Theme.of(context).primaryColor,
-                    //   onToggle: (bool value) {
-                    //     settings.setAtlasLinkUseAngleBrackets(value);
-                    //   },
-                    // ),
-                    // SettingsTile.switchTile(
-                    //   title: 'Append team names',
-                    //   subtitle: 'Adds auto-detected VRML team names to the end',
-                    //   switchValue: settings.atlasLinkAppendTeamNames,
-                    //   switchActiveColor: Theme.of(context).primaryColor,
-                    //   onToggle: (bool value) {
-                    //     settings.setAtlasLinkAppendTeamNames(value);
-                    //   },
-                    // }
-                  )
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          title: Text("Append team names"),
+                          subtitle: Text(
+                              "Adds auto-detected VRML team names to the end"),
+                        ),
+                      ),
+                      Switch(
+                        value: settings.atlasLinkAppendTeamNames,
+                        onChanged: (bool value) {
+                          settings.setAtlasLinkAppendTeamNames(value);
+                        },
+                        activeColor: Theme.of(context).primaryColor,
+                      ),
+                      SizedBox(
+                        width: 20,
+                      ),
+                    ],
+                  ),
                 ],
               )
             ]),
-          ),
-          SettingsSection(
-            titlePadding: const EdgeInsets.all(8),
-            title: 'Connection',
-            tiles: [
-              SettingsTile(
-                  title: 'Quest IP Address',
-                  subtitle: widget.echoVRIP,
-                  leading: Icon(Icons.wifi_rounded),
-                  onPressed: (BuildContext context) {},
-                  trailing: Container(
-                    width: 125,
-                    child: TextField(
-                      maxLength: 15,
-                      // controller:
-                      //     new TextEditingController(text: echoVRIP),
-                      keyboardType:
-                          TextInputType.numberWithOptions(decimal: true),
-                      cursorColor: Theme.of(context).primaryColor,
-                      decoration: inputDecoration,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (value) {
-                        widget.setEchoVRIP(value);
-                      },
-                    ),
-                  )),
-            ],
-          ),
-          SettingsSection(
-            title: 'Display',
-            tiles: [
-              SettingsTile(
-                  title: 'Link Type',
-                  subtitle: 'Join as spectator or player',
-                  trailing: DropdownButton<String>(
-                      value: widget.linkTypes[settings.atlasLinkStyle],
-                      items: widget.linkTypes.map((value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (value) => {
-                            settings.setAtlasLinkStyle(
-                                widget.linkTypes.indexOf(value))
-                          })),
-              SettingsTile.switchTile(
-                title: 'Surround with <>',
-                subtitle: 'Makes links clickable in Discord',
-                switchValue: settings.atlasLinkUseAngleBrackets,
-                switchActiveColor: Theme.of(context).primaryColor,
-                onToggle: (bool value) {
-                  settings.setAtlasLinkUseAngleBrackets(value);
-                },
-              ),
-              SettingsTile.switchTile(
-                title: 'Append team names',
-                subtitle: 'Adds auto-detected VRML team names to the end',
-                switchValue: settings.atlasLinkAppendTeamNames,
-                switchActiveColor: Theme.of(context).primaryColor,
-                onToggle: (bool value) {
-                  settings.setAtlasLinkAppendTeamNames(value);
-                },
-              ),
-            ],
           ),
         ]);
       }))
