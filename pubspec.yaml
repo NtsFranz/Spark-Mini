@@ -34,6 +34,14 @@ dependencies:
   flutter_map: any
   searchfield: ^0.5.2
   json_annotation: 3.1.1
+  flutter_file_manager:
+  permission_handler:
+  path_provider:
+  intl:
+  archive:
+  esys_flutter_share:
+    git:
+      url: git://github.com/jawad12345A/esys-flutter-share.git
   window_size:
     git:
       url: git://github.com/google/flutter-desktop-embedding.git
@@ -70,7 +78,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - assets/rec_2020-07-31_23-30-41.echoreplay
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   # An image asset can refer to one or more resolution-specific "variants", see

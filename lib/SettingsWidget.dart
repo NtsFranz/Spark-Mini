@@ -1,8 +1,11 @@
 import 'dart:developer';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'main.dart';
+import 'package:esys_flutter_share/esys_flutter_share.dart';
 
 class SettingsWidget extends StatefulWidget {
   final setEchoVRIP;
@@ -135,6 +138,48 @@ class SettingsState extends State<SettingsWidget> {
                           settings.setAtlasLinkAppendTeamNames(value);
                         },
                         activeColor: Theme.of(context).primaryColor,
+                      ),
+                      SizedBox(
+                        width: 20,
+                      ),
+                    ],
+                  ),Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          title: Text("Save Replays"),
+                          subtitle: Text(
+                              "Replays are recorded in the .echoreplay file format, which contains all API data from the game. Echoreplay files to not contain any video or audio data. The most common use of .echoreplay files is in the Echo Replay Viewer"),
+                        ),
+                      ),
+                      Switch(
+                        value: settings.saveReplays,
+                        onChanged: (bool value) {
+                          settings.setSaveReplays(value);
+                        },
+                        activeColor: Theme.of(context).primaryColor,
+                      ),
+                      SizedBox(
+                        width: 20,
+                      ),
+                    ],
+                  ),Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          title: Text("File Stuff"),
+                          subtitle: Text(
+                              "Does file stuff using plugin"),
+                        ),
+                      ),
+                      ElevatedButton(
+                        child: const Text('File Share'),
+                        onPressed: () async {
+                          log("pressed");
+                          //Share.text('my text title', 'This is my text to share with other applications.', 'text/plain');
+                          final ByteData bytes = await rootBundle.load('assets/rec_2020-07-31_23-30-41.echoreplay');
+                          await Share.file('Share Replay', 'rec_2020-07-31_23-30-41.echoreplay', bytes.buffer.asUint8List(), 'application/zip', text: 'Shared EchoReplay file from Spark Mini.');
+                        },
                       ),
                       SizedBox(
                         width: 20,

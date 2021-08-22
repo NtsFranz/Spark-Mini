@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +14,8 @@ class DashboardWidget extends StatelessWidget {
   final Map<String, dynamic> ipLocation;
   final Map<String, dynamic> orangeVRMLTeamInfo;
   final Map<String, dynamic> blueVRMLTeamInfo;
+  // String directory;
+  // final List file;
   // final int atlasLinkStyle;
   // final bool atlasLinkUseAngleBrackets;
   // final bool atlasLinkShowTeamNames;
@@ -595,16 +599,26 @@ class DashboardWidget extends StatelessWidget {
       return Center(
         child: Container(
           padding: EdgeInsets.all(20),
-          child: Text(
-            "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
-            textScaleFactor: 1.3,
-            textAlign: TextAlign.center,
-          ),
+          // child: ListView.builder(
+          //     itemCount: file.length,
+          //     itemBuilder: (BuildContext context, int index) {
+          //       return Text(file[index].toString());
+          //     }),
+           child: Text(
+             "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
+             textScaleFactor: 1.3,
+             textAlign: TextAlign.center,
+           ),
         ),
       );
     }
   }
-
+// Make New Function
+  void _listofFiles() async {
+    // setState(() {
+    //   file = Directory("$directory/resume/").listSync();  //use your folder name insted of resume.
+    // });
+  }
   /// <summary>
   /// This method is based on the python code that is used in the VRML Discord bot for calculating server score.
   /// </summary>
