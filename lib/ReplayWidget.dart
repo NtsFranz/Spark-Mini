@@ -2,19 +2,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:provider/provider.dart';
-import 'main.dart';
-import 'dart:math';
-import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 // import 'package:share/share.dart';
-import 'package:latlong/latlong.dart';
-import 'package:esys_flutter_share/esys_flutter_share.dart';
+// import 'package:esys_flutter_share/esys_flutter_share.dart';
 
 class ReplayWidget extends StatefulWidget {
   ReplayWidget(this.replayFilesPath);
-
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -31,9 +25,10 @@ class ReplayWidget extends StatefulWidget {
   @override
   _ReplayWidget createState() => _ReplayWidget(replayFilesPath);
 }
-class _ReplayWidget  extends State<ReplayWidget> {
+
+class _ReplayWidget extends State<ReplayWidget> {
   // String directory;
-  List filesList = new List();
+  List filesList = [];
   final String replayFilesPath;
   Future<String> _future;
 
@@ -52,7 +47,7 @@ class _ReplayWidget  extends State<ReplayWidget> {
 
   Future<void> deleteFile(String filePath) async {
     try {
-      final file = await File(filePath);
+      final file = File(filePath);
       await file.delete();
       _future = getFileList();
       setState(() {});
@@ -61,7 +56,7 @@ class _ReplayWidget  extends State<ReplayWidget> {
 
   Future<String> getFileList() async {
     final myDir = Directory('$replayFilesPath');
-    if(!await myDir.exists()){
+    if (!await myDir.exists()) {
       await myDir.create();
     }
     filesList = await Directory("$replayFilesPath").list().toList();
@@ -104,10 +99,14 @@ class _ReplayWidget  extends State<ReplayWidget> {
   Future<void> _onShareButtonPressed(String filePath, String fileName) async {
     print("search button clicked");
     final Uint8List bytes = await new File(filePath).readAsBytes();
+    if (!Platform.isWindows && !Platform.isLinux) {
+      Share.shareFiles(['$filePath'], text: fileName);
+    }
+    // TODO replace
     //final ByteData bytes = await rootBundle.load('assets/rec_2020-07-31_23-30-41.echoreplay');
-    await Share.file('Share Replay', '$fileName.echoreplay',
-        bytes, 'application/zip',
-        text: 'Shared EchoReplay file from Spark Mini.');
+    // await Share.file('Share Replay', '$fileName.echoreplay',
+    //     bytes, 'application/zip',
+    //     text: 'Shared EchoReplay file from Spark Mini.');
   }
 
   @override
@@ -128,19 +127,43 @@ class _ReplayWidget  extends State<ReplayWidget> {
                 itemBuilder: (context, index) {
                   return Card(
                       child: ListTile(
-                    title: Text(filesList[index].path.split('/').last),
-                    leading: new IconButton(
-                      icon: Icon(Icons.share),
-                      onPressed: () async {
-                        _onShareButtonPressed(filesList[index].path,filesList[index].path.split('/').last);
-                        //Share.text('my text title', 'This is my text to share with other applications.', 'text/plain');
-                      },
-                    ),
+                    title: Text(
+                        filesList[index].path.split('/').last.split('\\').last),
+                    leading: (() {
+                      if (!Platform.isWindows && !Platform.isLinux) {
+                        return new IconButton(
+                          icon: Icon(Icons.share),
+                          onPressed: () async {
+                            _onShareButtonPressed(
+                                filesList[index].path,
+                                filesList[index]
+                                    .path
+                                    .split('/')
+                                    .last
+                                    .split('\\')
+                                    .last);
+                            //Share.text('my text title', 'This is my text to share with other applications.', 'text/plain');
+                          },
+                          // icon: Icon(Icons.open_in_full),
+                          // onPressed: () async {
+                          //   OpenFile.open(filesList[index].path);
+                          //   //Share.text('my text title', 'This is my text to share with other applications.', 'text/plain');
+                          // },
+                        );
+                      }
+                    }()),
                     trailing: new IconButton(
                       icon: Icon(Icons.delete, color: Colors.redAccent),
                       onPressed: () async {
-                        _onDeleteButtonPressed(filesList[index].path,
-                            filesList[index].path.split('/').last, context);
+                        _onDeleteButtonPressed(
+                            filesList[index].path,
+                            filesList[index]
+                                .path
+                                .split('/')
+                                .last
+                                .split('\\')
+                                .last,
+                            context);
                         //Share.text('my text title', 'This is my text to share with other applications.', 'text/plain');
                       },
                     ),
@@ -152,7 +175,7 @@ class _ReplayWidget  extends State<ReplayWidget> {
                 child: Container(
                   padding: EdgeInsets.all(20),
                   child: Text(
-                    "No Replay Files Found.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
+                    "No Replay Files Found.\n\nTo record .echoreplay files, enable replay file saving in the Settings tab, then join a match.",
                     textScaleFactor: 1.3,
                     textAlign: TextAlign.center,
                   ),

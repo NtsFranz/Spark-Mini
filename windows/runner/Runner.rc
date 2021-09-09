@@ -90,7 +90,7 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "IgniteVR" "\0"
-            VALUE "FileDescription", "Non-windows version of Spark (previously IgniteBot)." "\0"
+            VALUE "FileDescription", "Spark Mini" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "spark_mini" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2021 ignitevr.gg. All rights reserved." "\0"

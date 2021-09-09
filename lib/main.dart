@@ -2,9 +2,9 @@ import 'dart:developer';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'package:spark_mini/IgniteStatsWidget.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'ReplayWidget.dart';
@@ -15,11 +15,8 @@ import 'dart:io';
 import 'package:window_size/window_size.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:archive/archive.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:archive/archive.dart';
 import 'dart:isolate';
 
 void main() {
@@ -83,12 +80,13 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   // bool atlasLinkAppendTeamNames = false;
   Timer timer;
 
+  bool inGame = false;
   static APIFrame lastFrame = APIFrame();
   String replayFilename = 'newReplay.echoreplay';
   String replayFilePath = '';
   SendPort logIsolatePort;
   ReceivePort logIsolateReceivePort2 = ReceivePort();
-  PermissionStatus permissionResult = PermissionStatus.denied;
+  bool storageAuthorized = false;
 
   Map<String, dynamic> lastIPLocationResponse = Map<String, dynamic>();
   Map<String, dynamic> orangeVRMLTeamInfo = Map<String, dynamic>();
@@ -99,8 +97,17 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   // Settings settings = new Settings();
 
   Future<void> getReplayFilePath() async {
-    Directory appDir = await getExternalStorageDirectory();
-    replayFilePath = '${appDir.path}/EchoReplayFiles/';
+    String folderName = 'replays';
+    if (Platform.isAndroid) {
+      Directory appDir = await getExternalStorageDirectory();
+      replayFilePath = p.join(appDir.path, folderName);
+    } else if (Platform.isWindows) {
+      Directory appDir = await getApplicationDocumentsDirectory();
+      replayFilePath = p.join(appDir.path, 'Spark-Mini', folderName);
+    } else {
+      Directory appDir = await getApplicationDocumentsDirectory();
+      replayFilePath = p.join(appDir.path, folderName);
+    }
   }
 
   @override
@@ -133,12 +140,19 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     getEchoVRIP();
   }
 
-  initLogIsolate()async{
+  initLogIsolate() async {
     await getFilePermissions();
     var ourFirstReceivePort = new ReceivePort();
     await Isolate.spawn(fullLogFetchIsolate, ourFirstReceivePort.sendPort);
     logIsolatePort = await ourFirstReceivePort.first;
-    logIsolatePort.send(['message 1', logIsolateReceivePort2.sendPort, echoVRIP,replayFilePath,replayFilename,Settings().saveReplays]);
+    logIsolatePort.send([
+      'message 1',
+      logIsolateReceivePort2.sendPort,
+      echoVRIP,
+      replayFilePath,
+      replayFilename,
+      Settings().saveReplays
+    ]);
     var msg = await logIsolateReceivePort2.first;
     print('main received "$msg"');
     var port3 = ReceivePort();
@@ -159,14 +173,14 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   static void computeFunction(Map argsMap) async {
     // var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
-      while(true) {
-        compute(fullLogFetch, argsMap);
-        sleep(const Duration(milliseconds:33));
-      }
+    while (true) {
+      compute(fullLogFetch, argsMap);
+      sleep(const Duration(milliseconds: 33));
+    }
     // });
   }
-  static fullLogFetchIsolate(SendPort sendPort) async {
 
+  static fullLogFetchIsolate(SendPort sendPort) async {
     // open our receive port. this is like turning on
     // our cellphone.
     var ourReceivePort = ReceivePort();
@@ -199,18 +213,20 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         }
         sleep(const Duration(milliseconds: 20));
       }*/
-      Timer timer = Timer.periodic(Duration(milliseconds: 30), (Timer t) async{
-        await fullLogFetch(map);
+      Timer timer = Timer.periodic(Duration(milliseconds: 30), (Timer t) async {
+        if (saveReplays) {
+          await fullLogFetch(map);
+        }
       });
       /*while (true) {
-        *//*try {
+        */ /*try {
           await fullLogFetch(map);
         } catch (Exception) {
 
-        }*//*
+        }*/ /*
         sleep(const Duration(seconds: 20));
       }*/
-    // }
+      // }
       // add a little delay to simulate some work being done
       // Future.delayed(const Duration(milliseconds: 100), () {
       //   // send a message back to the caller on their port,
@@ -229,7 +245,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     String echoVRIP = argsMap['echoVRIP'];
     String replayFilePath = argsMap['replayFilePath'];
     String replayFilename = argsMap['replayFilename'];
-    bool saveReplays =argsMap['saveReplays'];
+    bool saveReplays = argsMap['saveReplays'];
     try {
       //log(echoVRIP);
       final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
@@ -238,39 +254,30 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         // then parse the JSON.
         // setState(() {
         try {
-          var newFrame = APIFrame.fromJson(jsonDecode(response.body));
+          String rawJSON = response.body;
+          // var newFrame = APIFrame.fromJson(jsonDecode(rawJSON));
 
           try {
             // switched match
-            if (lastFrame.sessionid == null ||
-                lastFrame.sessionip != newFrame.sessionip) {}
+            // if (lastFrame.sessionid == null ||
+            //     lastFrame.sessionip != newFrame.sessionip) {}
 
-
-            if (lastFrame.game_status == "post_match") {
-              // newFilename();
-            }
-            final DateTime now = DateTime.now();
-            final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
-            final String formattedNow = formatter.format(now);
-            print(formattedNow);
+            // if (lastFrame.game_status == "post_match") {
+            //   // newFilename();
+            // }
             if (saveReplays) {
               if (!true) {
                 //getFilePermissions();
                 // code of read or write file in external storage (SD card)
               } else {
-                if (!(await File('$replayFilePath$replayFilename').exists())) {
-                  new File('$replayFilePath$replayFilename').create(
-                      recursive: true);
-                }
-                var file = await File('$replayFilePath$replayFilename')
-                    .writeAsString('$formattedNow \t ${newFrame.toString()}\n', mode: FileMode.append);
+                saveReplayFrame(replayFilePath, replayFilename, rawJSON);
               }
             }
             // Do something with the file.
           } catch (Exception) {
             print('Failed to process API data');
           }
-          lastFrame = newFrame;
+          // lastFrame = newFrame;
         } catch (Exception) {
           print('Failed to parse API response');
         }
@@ -281,15 +288,8 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
             //getFilePermissions();
             // code of read or write file in external storage (SD card)
           } else {
-            final DateTime now = DateTime.now();
-            final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
-            final String formattedNow = formatter.format(now);
-            if (!(await File('$replayFilePath$replayFilename').exists())) {
-              new File('$replayFilePath$replayFilename').create(
-                  recursive: true);
-            }
-            var file = await File('$replayFilePath$replayFilename')
-                .writeAsString('$formattedNow \t FRAME TEST\n', mode: FileMode.append);
+            await saveReplayFrame(
+                replayFilePath, replayFilename, 'NOT IN GAME');
           }
         }
         // If the server did not return a 200 OK response,
@@ -303,151 +303,162 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
           // code of read or write file in external storage (SD card)
         } else {
           //newFilename();
-          final DateTime now = DateTime.now();
-          final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.');
-          final String formattedNow = formatter.format(now);
-          if (!(await File('$replayFilePath$replayFilename').exists())) {
-            new File('$replayFilePath$replayFilename').create(
-                recursive: true);
-          }
-          var file = await File('$replayFilePath$replayFilename')
-              .writeAsString('$formattedNow${now.millisecond} \t FRAME TEST\n', mode: FileMode.append);
-          print(await file.length());
-          print('${now.millisecond}');
+          saveReplayFrame(replayFilePath, replayFilename, 'NOT IN MATCH');
         }
       }
       //print('Not in game');
     }
   }
 
+  static Future<void> saveReplayFrame(
+      String replayFilePath, String replayFilename, String data) async {
+    // generate the timestamp string
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
+    final String formattedNow = formatter.format(now);
 
-Future<void> getFilePermissions() async {
-  permissionResult = await Permission.storage.status;
-  if (!permissionResult.isGranted) {
-    if (await Permission.storage
-        .request()
-        .isGranted) {
-      permissionResult = await Permission.storage.status;
+    // the file we are saving to
+    File file = File(p.join(replayFilePath, replayFilename));
+
+    // create file if it doesn't exist
+    if (!(await file.exists())) {
+      file.create(recursive: true);
+    }
+
+    // write the data
+    file.writeAsString('$formattedNow\t$data\n', mode: FileMode.append);
+  }
+
+  Future<void> getFilePermissions() async {
+    storageAuthorized = false;
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      storageAuthorized = true;
+    } else {
+      PermissionStatus permissionResult = await Permission.storage.status;
+      storageAuthorized = permissionResult.isGranted;
+    }
+    if (!storageAuthorized) {
       // Either the permission was already granted before or the user just granted it.
+      if (await Permission.storage.request().isGranted) {
+        storageAuthorized = true;
+      }
     }
     // We didn't ask for permission yet or the permission has been denied before but not permanently.
-  }
-  if (permissionResult.isGranted) {
-    await getReplayFilePath();
-    if (Settings().saveReplays) {
-      await newFilename();
-    }
-    try {
-      final myDir = Directory('$replayFilePath');
-      if(!await myDir.exists()){
-        await myDir.create();
+    if (storageAuthorized) {
+      await getReplayFilePath();
+      if (Settings().saveReplays) {
+        await newFilename();
       }
-      fileList = Directory("$replayFilePath").listSync();
-    }catch(Exception){
-      fileList = new List();
-    }
-// code of read or write file in external storage (SD card)
-  }
-}
-
-Future<void> getEchoVRIP() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  try {
-    String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
-    setState(() {
-      echoVRIP = newEchoVRIP;
-    });
-  } catch (Exception) {
-    setState(() {
-      echoVRIP = '127.0.0.1';
-    });
-  }
-}
-
-Future<void> setEchoVRIP(String value) async {
-  setState(() {
-    echoVRIP = value;
-  });
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  prefs.setString('echoVRIP', value);
-}
-
-@override
-void dispose() {
-  _currentPage.dispose();
-  // _echoVRIP.dispose();
-  timer.cancel();
-  super.dispose();
-}
-
-Future<void> newFilename() async {
-  // lock(fileWritingLock) {
-  String lastFilename = replayFilename;
-  final DateTime now = DateTime.now();
-  final DateFormat formatter = DateFormat("yyyy-MM-dd_HH-mm-ss");
-  replayFilename = "rec_" + formatter.format(now);
-  print(replayFilename);
-  if (true) //(Settings.Default.useCompression)
-      {
-    if ((File('$replayFilePath$lastFilename').existsSync())) {
-      final file = File('$replayFilePath$lastFilename');
-      var encoder = ZipFileEncoder();
-      encoder.create('$replayFilePath${lastFilename}_ZIPPED.echoreplay');
-      encoder.addFile(file);
-      encoder.close();
       try {
-        await file.delete();
-      } catch (e) {}
+        final myDir = Directory('$replayFilePath');
+        if (!await myDir.exists()) {
+          await myDir.create();
+        }
+        fileList = Directory("$replayFilePath").listSync();
+      } catch (Exception) {
+        fileList = new List();
+      }
+      // code of read or write file in external storage (SD card)
     }
   }
-  // if(!(File('$replayFilePath$replayFilename').existsSync())){
-  //     new File('$replayFilePath$replayFilename').createSync(recursive: true);
-  //     }
-  // if(File(replayFilename).exists() )
-  // }
-  final myDir = Directory('$replayFilePath');
-  if(!await myDir.exists()){
-    await myDir.create();
+
+  Future<void> getEchoVRIP() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    try {
+      String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
+      setState(() {
+        echoVRIP = newEchoVRIP;
+      });
+    } catch (Exception) {
+      setState(() {
+        echoVRIP = '127.0.0.1';
+      });
+    }
   }
-  fileList = Directory("$replayFilePath").listSync();
-}
 
-void fetchAPI() async {
-  // return;
-  try {
-    log(echoVRIP);
-    final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
-    if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
-      // setState(() {
-      try {
-        var newFrame = APIFrame.fromJson(jsonDecode(response.body));
+  Future<void> setEchoVRIP(String value) async {
+    setState(() {
+      echoVRIP = value;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('echoVRIP', value);
+  }
 
+  @override
+  void dispose() {
+    _currentPage.dispose();
+    // _echoVRIP.dispose();
+    timer.cancel();
+    super.dispose();
+  }
+
+  Future<void> newFilename() async {
+    // lock(fileWritingLock) {
+    String lastFilename = replayFilename;
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat("yyyy-MM-dd_HH-mm-ss");
+    replayFilename = 'rec_${formatter.format(now)}.echoreplay';
+    print(replayFilename);
+    if (true) //(Settings.Default.useCompression)
+    {
+      if ((File(p.join(replayFilePath, lastFilename)).existsSync())) {
+        final file = File(p.join(replayFilePath, lastFilename));
+        var encoder = ZipFileEncoder();
+        encoder.create(
+            '${p.join(replayFilePath, lastFilename)}_ZIPPED.echoreplay');
+        encoder.addFile(file);
+        encoder.close();
         try {
-          // switched match
-          if (lastFrame.sessionid == null ||
-              lastFrame.sessionip != newFrame.sessionip) {
-            getIPAPI(newFrame.sessionip);
-          }
+          await file.delete();
+        } catch (e) {}
+      }
+    }
+    // if(!(File('$replayFilePath$replayFilename').existsSync())){
+    //     new File('$replayFilePath$replayFilename').createSync(recursive: true);
+    //     }
+    // if(File(replayFilename).exists() )
+    // }
+    final myDir = Directory('$replayFilePath');
+    if (!await myDir.exists()) {
+      await myDir.create(recursive: true);
+    }
+    fileList = Directory("$replayFilePath").listSync();
+  }
 
-          // player joined or left (or switched match)
-          for (int i = 0; i < 2; i++) {
+  void fetchAPI() async {
+    try {
+      final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
+      if (response.statusCode == 200) {
+        // If the server did return a 200 OK response,
+        // then parse the JSON.
+        // setState(() {
+        try {
+          var newFrame = APIFrame.fromJson(jsonDecode(response.body));
+
+          try {
+            // switched match
             if (lastFrame.sessionid == null ||
-                lastFrame.sessionip != newFrame.sessionip ||
-                lastFrame.teams[i].players.length !=
-                    newFrame.teams[i].players.length) {
-              getTeamnameFromPlayerList(
-                  newFrame.teams[i].players
-                      .map<String>((p) => p.name)
-                      .toList(),
-                  i);
+                lastFrame.sessionip != newFrame.sessionip) {
+              getIPAPI(newFrame.sessionip);
             }
-          }
-          if (lastFrame.game_status == "post_match") {
-            // newFilename();
-          }
-          /*final DateTime now = DateTime.now();
+
+            // player joined or left (or switched match)
+            for (int i = 0; i < 2; i++) {
+              if (lastFrame.sessionid == null ||
+                  lastFrame.sessionip != newFrame.sessionip ||
+                  lastFrame.teams[i].players.length !=
+                      newFrame.teams[i].players.length) {
+                getTeamnameFromPlayerList(
+                    newFrame.teams[i].players
+                        .map<String>((p) => p.name)
+                        .toList(),
+                    i);
+              }
+            }
+            if (lastFrame.game_status == "post_match") {
+              // newFilename();
+            }
+            /*final DateTime now = DateTime.now();
           final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
           final String formattedNow = formatter.format(now);
           print(formattedNow);
@@ -464,17 +475,21 @@ void fetchAPI() async {
                   .writeAsString('$formattedNow \t ${newFrame.toString()}\n', mode: FileMode.append);
             }
           }*/
-          // Do something with the file.
+            // Do something with the file.
+          } catch (Exception) {
+            print('Failed to process API data');
+            inGame = false;
+          }
+          lastFrame = newFrame;
+          inGame = true;
         } catch (Exception) {
-          print('Failed to process API data');
+          print('Failed to parse API response');
+          inGame = false;
         }
-        lastFrame = newFrame;
-      } catch (Exception) {
-        print('Failed to parse API response');
-      }
-      // });
-    } else {
-      /*if (Settings().saveReplays) {
+        // });
+      } else {
+        inGame = false;
+        /*if (Settings().saveReplays) {
         if (!permissionResult.isGranted) {
           getFilePermissions();
           // code of read or write file in external storage (SD card)
@@ -486,58 +501,59 @@ void fetchAPI() async {
       // then throw an exception.
       // throw Exception('Failed to get game data');
 
-  } catch (SocketException) {
-    if (Settings().saveReplays) {
-      if (!permissionResult.isGranted) {
-        getFilePermissions();
-        // code of read or write file in external storage (SD card)
-      } else {
-        //newFilename();
+    } catch (SocketException) {
+      if (Settings().saveReplays) {
+        if (!storageAuthorized) {
+          getFilePermissions();
+          // code of read or write file in external storage (SD card)
+        } else {
+          //newFilename();
+        }
       }
+      print('Not in game');
+      inGame = false;
     }
-    print('Not in game');
   }
-}
 
-void getIPAPI(String ip) async {
-  print('Fetching from ip-api');
-  final response = await http.get(Uri.http('ip-api.com', 'json/$ip'));
+  void getIPAPI(String ip) async {
+    print('Fetching from ip-api');
+    final response = await http.get(Uri.http('ip-api.com', 'json/$ip'));
 
-  if (response.statusCode == 200) {
-    // If the server did return a 200 OK response,
-    // then parse the JSON.
-    setState(() {
-      lastIPLocationResponse = jsonDecode(response.body);
-    });
-  } else {
-    // If the server did not return a 200 OK response,
-    // then throw an exception.
-    throw Exception('Failed to get game data');
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response,
+      // then parse the JSON.
+      setState(() {
+        lastIPLocationResponse = jsonDecode(response.body);
+      });
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+      throw Exception('Failed to get game data');
+    }
   }
-}
 
-void getTeamnameFromPlayerList(List<String> players, int teamIndex) async {
-  final response = await http.get(Uri.https(
-      'ignitevr.gg',
-      'cgi-bin/EchoStats.cgi/get_team_name_from_list',
-      {'player_list': '${jsonEncode(players)}'}));
+  void getTeamnameFromPlayerList(List<String> players, int teamIndex) async {
+    final response = await http.get(Uri.https(
+        'ignitevr.gg',
+        'cgi-bin/EchoStats.cgi/get_team_name_from_list',
+        {'player_list': '${jsonEncode(players)}'}));
 
-  if (response.statusCode == 200) {
-    // If the server did return a 200 OK response,
-    // then parse the JSON.
-    setState(() {
-      if (teamIndex == 0) {
-        orangeVRMLTeamInfo = jsonDecode(response.body);
-      } else if (teamIndex == 1) {
-        blueVRMLTeamInfo = jsonDecode(response.body);
-      }
-    });
-  } else {
-    // If the server did not return a 200 OK response,
-    // then throw an exception.
-    throw Exception('Failed to get player team info');
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response,
+      // then parse the JSON.
+      setState(() {
+        if (teamIndex == 0) {
+          blueVRMLTeamInfo = jsonDecode(response.body);
+        } else if (teamIndex == 1) {
+          orangeVRMLTeamInfo = jsonDecode(response.body);
+        }
+      });
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+      throw Exception('Failed to get player team info');
+    }
   }
-}
 
 // void getSharedPrefs() async {
 //   SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -551,67 +567,66 @@ void getTeamnameFromPlayerList(List<String> players, int teamIndex) async {
 //   });
 // }
 
-@override
-Widget build(BuildContext context) {
-  // This method is rerun every time setState is called, for instance as done
-  // by the _incrementCounter method above.
-  //
-  // The Flutter framework has been optimized to make rerunning build methods
-  // fast, so that you can just rebuild anything that needs updating rather
-  // than having to individually change instances of widgets.
+  @override
+  Widget build(BuildContext context) {
+    // This method is rerun every time setState is called, for instance as done
+    // by the _incrementCounter method above.
+    //
+    // The Flutter framework has been optimized to make rerunning build methods
+    // fast, so that you can just rebuild anything that needs updating rather
+    // than having to individually change instances of widgets.
 
-  final colorScheme = Theme
-      .of(context)
-      .colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
-  // getSharedPrefs();
+    // getSharedPrefs();
 
-  var bottomNavigationItems = <BottomNavigationBarItem>[
-    BottomNavigationBarItem(
-        icon: const Icon(Icons.dashboard), label: "Dashboard"),
-    BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
-    BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
-    // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
-    BottomNavigationBarItem(
-        icon: const Icon(Icons.settings), label: "Settings"),
-  ];
+    var bottomNavigationItems = <BottomNavigationBarItem>[
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.dashboard), label: "Dashboard"),
+      BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Links"),
+      BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
+      // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.settings), label: "Settings"),
+    ];
 
-  List<Widget> _tabViews = [
-    DashboardWidget(lastFrame, lastIPLocationResponse, orangeVRMLTeamInfo,
-        blueVRMLTeamInfo),
-    AtlasWidget(
-      frame: lastFrame,
-      ipLocation: lastIPLocationResponse,
-    ),
-    ReplayWidget(replayFilePath),
-    // IgniteStatsWidget(),
-    // ColorPage(Colors.yellow),
-    SettingsWidget(echoVRIP: echoVRIP, setEchoVRIP: setEchoVRIP),
-  ];
+    List<Widget> _tabViews = [
+      DashboardWidget(inGame, lastFrame, lastIPLocationResponse,
+          orangeVRMLTeamInfo, blueVRMLTeamInfo),
+      AtlasWidget(
+        frame: lastFrame,
+        ipLocation: lastIPLocationResponse,
+      ),
+      ReplayWidget(replayFilePath),
+      // IgniteStatsWidget(),
+      // ColorPage(Colors.yellow),
+      SettingsWidget(echoVRIP: echoVRIP, setEchoVRIP: setEchoVRIP),
+    ];
 
-  return Scaffold(
-    appBar: AppBar(
-      // Here we take the value from the MyHomePage object that was created by
-      // the App.build method, and use it to set our appbar title.
-      title: Text(widget.title),
-    ),
-    body: _tabViews[_currentPage.value],
-    bottomNavigationBar: BottomNavigationBar(
-      showUnselectedLabels: true,
-      items: bottomNavigationItems,
-      currentIndex: _currentPage.value,
-      type: BottomNavigationBarType.fixed,
-      // selectedItemColor: colorScheme.onPrimary,
-      // unselectedItemColor: colorScheme.onPrimary.withOpacity(.5),
-      // backgroundColor: Colors.white10,
-      onTap: (index) {
-        setState(() {
-          _currentPage.value = index;
-        });
-      },
-    ),
-  );
-}}
+    return Scaffold(
+      appBar: AppBar(
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
+      ),
+      body: _tabViews[_currentPage.value],
+      bottomNavigationBar: BottomNavigationBar(
+        showUnselectedLabels: true,
+        items: bottomNavigationItems,
+        currentIndex: _currentPage.value,
+        type: BottomNavigationBarType.fixed,
+        // selectedItemColor: colorScheme.onPrimary,
+        // unselectedItemColor: colorScheme.onPrimary.withOpacity(.5),
+        // backgroundColor: Colors.white10,
+        onTap: (index) {
+          setState(() {
+            _currentPage.value = index;
+          });
+        },
+      ),
+    );
+  }
+}
 
 class Settings with ChangeNotifier {
   // String echoVRIP = '127.0.0.1';
@@ -620,7 +635,6 @@ class Settings with ChangeNotifier {
   bool atlasLinkAppendTeamNames = false;
   bool saveReplays = true;
   String clientName = ''; // doesn't need to notify others usually
-
 
   Settings() {
     log('recreate');
@@ -656,7 +670,8 @@ class Settings with ChangeNotifier {
     save();
   }
 
-  String getFormattedLink(String sessionid,
+  String getFormattedLink(
+      String sessionid,
       Map<String, dynamic> orangeVRMLTeamInfo,
       Map<String, dynamic> blueVRMLTeamInfo) {
     if (sessionid == null) sessionid = '**********************';
@@ -703,7 +718,10 @@ class Settings with ChangeNotifier {
         blueName = blueVRMLTeamInfo['team_name'];
       }
 
-      link = "$link $orangeName vs $blueName";
+      // if at least one team name exists
+      if (orangeName != '?' || blueName != '?') {
+        link = "$link $orangeName vs $blueName";
+      }
     }
 
     return link;
@@ -793,8 +811,8 @@ class APITeam {
       team: json['team'],
       players: json.containsKey('players')
           ? json['players']
-          .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
-          .toList()
+              .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
+              .toList()
           : <APIPlayer>[],
     );
   }
@@ -827,15 +845,16 @@ class APIStats {
   final int assists;
   final int shots_taken;
 
-  APIStats({this.possession_time,
-    this.points,
-    this.saves,
-    this.goals,
-    this.stuns,
-    this.steals,
-    this.blocks,
-    this.assists,
-    this.shots_taken});
+  APIStats(
+      {this.possession_time,
+      this.points,
+      this.saves,
+      this.goals,
+      this.stuns,
+      this.steals,
+      this.blocks,
+      this.assists,
+      this.shots_taken});
 
   factory APIStats.fromJson(Map<String, dynamic> json) {
     return APIStats(
@@ -867,19 +886,20 @@ class APILastThrow {
   final double off_axis_penalty;
   final double throw_move_penalty;
 
-  APILastThrow({this.arm_speed,
-    this.total_speed,
-    this.off_axis_spin_deg,
-    this.wrist_throw_penalty,
-    this.rot_per_sec,
-    this.pot_speed_from_rot,
-    this.speed_from_arm,
-    this.speed_from_movement,
-    this.speed_from_wrist,
-    this.wrist_align_to_throw_deg,
-    this.throw_align_to_movement_deg,
-    this.off_axis_penalty,
-    this.throw_move_penalty});
+  APILastThrow(
+      {this.arm_speed,
+      this.total_speed,
+      this.off_axis_spin_deg,
+      this.wrist_throw_penalty,
+      this.rot_per_sec,
+      this.pot_speed_from_rot,
+      this.speed_from_arm,
+      this.speed_from_movement,
+      this.speed_from_wrist,
+      this.wrist_align_to_throw_deg,
+      this.throw_align_to_movement_deg,
+      this.off_axis_penalty,
+      this.throw_move_penalty});
 
   factory APILastThrow.fromJson(Map<String, dynamic> json) {
     return APILastThrow(

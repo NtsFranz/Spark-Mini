@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Spark Mini
-Comment=Non-Windows version of Spark (formerly IgniteBot)
+Comment=Non-Windows version of Spark
 Exec=spark_mini
 Icon=/assets/icon/ignite_logo.png
 Terminal=false

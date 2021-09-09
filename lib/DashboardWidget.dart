@@ -1,15 +1,15 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'main.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
-import 'package:share/share.dart';
 import 'package:latlong/latlong.dart';
 
 class DashboardWidget extends StatelessWidget {
+  final bool inGame;
   final APIFrame frame;
   final Map<String, dynamic> ipLocation;
   final Map<String, dynamic> orangeVRMLTeamInfo;
@@ -21,8 +21,8 @@ class DashboardWidget extends StatelessWidget {
   // final bool atlasLinkShowTeamNames;
   // final SharedPreferences prefs;
   // final Settings settings;
-  DashboardWidget(this.frame, this.ipLocation, this.orangeVRMLTeamInfo,
-      this.blueVRMLTeamInfo);
+  DashboardWidget(this.inGame, this.frame, this.ipLocation,
+      this.orangeVRMLTeamInfo, this.blueVRMLTeamInfo);
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +31,24 @@ class DashboardWidget extends StatelessWidget {
         body: ListView(
           padding: const EdgeInsets.all(8),
           children: <Widget>[
+            (() {
+              if (!inGame) {
+                return Card(
+                  child:
+                      Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                    ListTile(
+                      title: Center(
+                          child: Text(
+                        'Not in Game. Data is out of date.',
+                      )),
+                    )
+                  ]),
+                  color: Colors.red,
+                );
+              } else {
+                return Container();
+              }
+            }()),
             Card(
               // shape: RoundedRectangleBorder(
               //   borderRadius: BorderRadius.circular(15.0),
@@ -48,13 +66,15 @@ class DashboardWidget extends StatelessWidget {
                             orangeVRMLTeamInfo, blueVRMLTeamInfo);
                         Clipboard.setData(new ClipboardData(text: link));
 
-                        Scaffold.of(context).showSnackBar(SnackBar(
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(link),
                         ));
                       },
                       onLongPress: () {
-                        Share.share(settings.getFormattedLink(frame.sessionid,
-                            orangeVRMLTeamInfo, blueVRMLTeamInfo));
+                        if (!Platform.isWindows) {
+                          Share.share(settings.getFormattedLink(frame.sessionid,
+                              orangeVRMLTeamInfo, blueVRMLTeamInfo));
+                        }
                       },
                     ),
                   )
@@ -85,13 +105,13 @@ class DashboardWidget extends StatelessWidget {
                     children: [
                       (() {
                         if (ipLocation != null && ipLocation['lat'] != null) {
-                          double lat = ipLocation['lat'];
-                          double lon = ipLocation['lon'];
+                          final LatLng latLon =
+                              LatLng(ipLocation['lat'], ipLocation['lon']);
                           return Container(
                               height: 200,
                               child: FlutterMap(
                                 options: MapOptions(
-                                    center: LatLng(lat, lon),
+                                    center: latLon,
                                     zoom: 3.5,
                                     interactive: false),
                                 layers: [
@@ -104,7 +124,7 @@ class DashboardWidget extends StatelessWidget {
                                       Marker(
                                         width: 10.0,
                                         height: 10.0,
-                                        point: LatLng(lat, lon),
+                                        point: latLon,
                                         builder: (ctx) => Container(
                                           margin: EdgeInsets.all(0.0),
                                           decoration: BoxDecoration(
@@ -450,7 +470,7 @@ class DashboardWidget extends StatelessWidget {
                               style: TextStyle(color: Colors.orange),
                             ),
                             subtitle: Text(() {
-                              if (frame.teams[0].players != null) {
+                              if (frame.teams[1].players != null) {
                                 return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
                               } else {
                                 return '';
@@ -520,7 +540,7 @@ class DashboardWidget extends StatelessWidget {
                             ),
                             subtitle: Text(() {
                               if (frame.teams[1].players != null) {
-                                return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
+                                return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
                               } else {
                                 return '';
                               }
@@ -604,21 +624,23 @@ class DashboardWidget extends StatelessWidget {
           //     itemBuilder: (BuildContext context, int index) {
           //       return Text(file[index].toString());
           //     }),
-           child: Text(
-             "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
-             textScaleFactor: 1.3,
-             textAlign: TextAlign.center,
-           ),
+          child: Text(
+            "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
+            textScaleFactor: 1.3,
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
   }
-// Make New Function
+
+  // Make New Function
   void _listofFiles() async {
     // setState(() {
     //   file = Directory("$directory/resume/").listSync();  //use your folder name insted of resume.
     // });
   }
+
   /// <summary>
   /// This method is based on the python code that is used in the VRML Discord bot for calculating server score.
   /// </summary>
@@ -626,32 +648,31 @@ class DashboardWidget extends StatelessWidget {
   static double calculateServerScore(
       List<int> bluePings, List<int> orangePings) {
     // configurable parameters for tuning
-    int min_ping = 10; // you don't lose points for being higher than this value
-    int max_ping = 150; // won't compute if someone is over this number
-    int ping_threshold =
-        100; // you lose extra points for being higher than this
+    int minPing = 10; // you don't lose points for being higher than this value
+    int maxPing = 150; // won't compute if someone is over this number
+    int pingThreshold = 100; // you lose extra points for being higher than this
 
     // points_distribution dictates how many points come from each area:
     //   0 - difference in sum of pings between teams
     //   1 - within-team variance
     //   2 - overall server variance
     //   3 - overall high/low pings for server
-    List<int> points_distribution = [30, 30, 30, 10];
+    List<int> pointsDistribution = [30, 30, 30, 10];
 
     // determine max possible server/team variance and max possible sum diff,
     // given the min/max allowable ping
-    double max_server_var = variance([
-      min_ping,
-      min_ping,
-      min_ping,
-      min_ping,
-      max_ping,
-      max_ping,
-      max_ping,
-      max_ping
+    double maxServerVar = variance([
+      minPing,
+      minPing,
+      minPing,
+      minPing,
+      maxPing,
+      maxPing,
+      maxPing,
+      maxPing
     ]);
-    double max_team_var = variance([min_ping, min_ping, max_ping, max_ping]);
-    int max_sum_diff = (4 * max_ping) - (4 * min_ping);
+    double maxTeamVar = variance([minPing, minPing, maxPing, maxPing]);
+    int maxSumDiff = (4 * maxPing) - (4 * minPing);
 
     // sanity check for ping values
     if (bluePings == null ||
@@ -661,8 +682,7 @@ class DashboardWidget extends StatelessWidget {
       // Console.WriteLine("No player's ping can be over 150.");
       return -1;
     }
-    if (bluePings.reduce(max) > max_ping ||
-        orangePings.reduce(max) > max_ping) {
+    if (bluePings.reduce(max) > maxPing || orangePings.reduce(max) > maxPing) {
       // Console.WriteLine("No player's ping can be over 150.");
       return -1;
     }
@@ -670,35 +690,33 @@ class DashboardWidget extends StatelessWidget {
     // calculate points for sum diff
     int blueSum = bluePings.reduce((a, b) => a + b);
     int orangeSum = orangePings.reduce((a, b) => a + b);
-    int sum_diff = (blueSum - orangeSum).abs();
+    int sumDiff = (blueSum - orangeSum).abs();
 
-    double sum_points =
-        (1 - (sum_diff / max_sum_diff)) * points_distribution[0];
+    double sumPoints = (1 - (sumDiff / maxSumDiff)) * pointsDistribution[0];
 
     // calculate points for team variances
     double blueVariance = variance(bluePings);
     double orangeVariance = variance(orangePings);
 
-    double mean_var = (blueVariance + orangeVariance) / 2;
-    double team_points =
-        (1 - (mean_var / max_team_var)) * points_distribution[1];
+    double meanVar = (blueVariance + orangeVariance) / 2;
+    double teamPoints = (1 - (meanVar / maxTeamVar)) * pointsDistribution[1];
 
     // calculate points for server variance
     List<int> bothPings = new List.from(bluePings)..addAll(orangePings);
 
-    double server_var = variance(bothPings);
+    double serverVar = variance(bothPings);
 
-    double server_points =
-        (1 - (server_var / max_server_var)) * points_distribution[2];
+    double serverPoints =
+        (1 - (serverVar / maxServerVar)) * pointsDistribution[2];
 
     // calculate points for high/low ping across server
-    double hilo = ((blueSum + orangeSum) - (min_ping * 8)) /
-        ((ping_threshold * 8) - (min_ping * 8));
+    double hilo = ((blueSum + orangeSum) - (minPing * 8)) /
+        ((pingThreshold * 8) - (minPing * 8));
 
-    double hilo_points = (1 - hilo) * points_distribution[3];
+    double hiloPoints = (1 - hilo) * pointsDistribution[3];
 
     // add up points
-    double finalScore = sum_points + team_points + server_points + hilo_points;
+    double finalScore = sumPoints + teamPoints + serverPoints + hiloPoints;
 
     return finalScore;
   }

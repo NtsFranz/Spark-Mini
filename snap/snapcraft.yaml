@@ -1,7 +1,7 @@
 name: spark_mini
 version: 1.0.0
 summary: Spark Mini
-description: Non-Windows version of Spark (formerly IgniteBot)
+description: Non-Windows version of Spark
 
 confinement: strict
 base: core18
