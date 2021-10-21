@@ -1,9 +1,13 @@
 import 'dart:developer';
+import 'package:archive/archive_io.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'package:spark_mini/IgniteStatsWidget.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
+import 'ReplayWidget.dart';
 import 'SettingsWidget.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
@@ -11,6 +15,9 @@ import 'dart:io';
 import 'package:window_size/window_size.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:isolate';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +52,7 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title, @required this.restorationId})
       : super(key: key);
+
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
   // how it looks.
@@ -63,19 +71,44 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   final RestorableInt _currentPage = RestorableInt(0);
+
   // final RestorableString _echoVRIP = RestorableString('127.0.0.1');
   String echoVRIP = '127.0.0.1';
+
   // int atlasLinkStyle = 0;
   // bool atlasLinkUseAngleBrackets = false;
   // bool atlasLinkAppendTeamNames = false;
   Timer timer;
 
+  bool inGame = false;
   static APIFrame lastFrame = APIFrame();
+  String replayFilename = 'newReplay.echoreplay';
+  String replayFilePath = '';
+  SendPort logIsolatePort;
+  ReceivePort logIsolateReceivePort2 = ReceivePort();
+  bool storageAuthorized = false;
+
   Map<String, dynamic> lastIPLocationResponse = Map<String, dynamic>();
   Map<String, dynamic> orangeVRMLTeamInfo = Map<String, dynamic>();
   Map<String, dynamic> blueVRMLTeamInfo = Map<String, dynamic>();
+  List fileList = new List();
+
   // SharedPreferences prefs;
   // Settings settings = new Settings();
+
+  Future<void> getReplayFilePath() async {
+    String folderName = 'replays';
+    if (Platform.isAndroid) {
+      Directory appDir = await getExternalStorageDirectory();
+      replayFilePath = p.join(appDir.path, folderName);
+    } else if (Platform.isWindows) {
+      Directory appDir = await getApplicationDocumentsDirectory();
+      replayFilePath = p.join(appDir.path, 'Spark-Mini', folderName);
+    } else {
+      Directory appDir = await getApplicationDocumentsDirectory();
+      replayFilePath = p.join(appDir.path, folderName);
+    }
+  }
 
   @override
   String get restorationId => widget.restorationId;
@@ -89,11 +122,244 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   @override
   void initState() {
     super.initState();
+    getFilePermissions();
+    Map map = Map();
+    map['echoVRIP'] = echoVRIP;
+    map['replayFilePath'] = replayFilePath;
+    map['replayFilename'] = replayFilename;
+    map['saveReplays'] = Settings().saveReplays;
+    initLogIsolate();
+    //compute(computeFunction, map);
+    /*var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
+      compute(fullLogFetch, map);
+    });*/
     timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
       fetchAPI();
       setState(() {});
     });
     getEchoVRIP();
+  }
+
+  initLogIsolate() async {
+    await getFilePermissions();
+    var ourFirstReceivePort = new ReceivePort();
+    await Isolate.spawn(fullLogFetchIsolate, ourFirstReceivePort.sendPort);
+    logIsolatePort = await ourFirstReceivePort.first;
+    logIsolatePort.send([
+      'message 1',
+      logIsolateReceivePort2.sendPort,
+      echoVRIP,
+      replayFilePath,
+      replayFilename,
+      Settings().saveReplays
+    ]);
+    var msg = await logIsolateReceivePort2.first;
+    print('main received "$msg"');
+    var port3 = ReceivePort();
+    logIsolatePort.send(['message 2', port3.sendPort]);
+    port3.first.then((msg) {
+      print('main received "$msg"');
+    });
+
+    // use 'then' one more time
+    var port4 = ReceivePort();
+    logIsolatePort.send(['port 4', port4.sendPort]);
+    port4.first.then((msg) {
+      print('main received "$msg"');
+    });
+
+    print('end of main');
+  }
+
+  static void computeFunction(Map argsMap) async {
+    // var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
+    while (true) {
+      compute(fullLogFetch, argsMap);
+      sleep(const Duration(milliseconds: 33));
+    }
+    // });
+  }
+
+  static fullLogFetchIsolate(SendPort sendPort) async {
+    // open our receive port. this is like turning on
+    // our cellphone.
+    var ourReceivePort = ReceivePort();
+
+    // tell whoever created us what port they can reach us on
+    // (like giving them our phone number)
+    sendPort.send(ourReceivePort.sendPort);
+
+    // while(true) {
+    // listen for text messages that are sent to us,
+    // and respond to them with this algorithm
+    await for (var msg in ourReceivePort) {
+      var data = msg[0]; // the 1st element we receive should be their message
+      print('echo received "$data"');
+      SendPort replyToPort = msg[1]; // the 2nd element should be their port
+      String echoVRIP = msg[2];
+      String replayFilePath = msg[3];
+      String replayFilename = msg[4];
+      bool saveReplays = msg[5];
+      Map map = Map();
+      map['echoVRIP'] = echoVRIP;
+      map['replayFilePath'] = replayFilePath;
+      map['replayFilename'] = replayFilename;
+      map['saveReplays'] = saveReplays;
+      /*while (true) {
+        try {
+          await fullLogFetch(map);
+        } catch (Exception) {
+
+        }
+        sleep(const Duration(milliseconds: 20));
+      }*/
+      Timer timer = Timer.periodic(Duration(milliseconds: 30), (Timer t) async {
+        if (saveReplays) {
+          await fullLogFetch(map);
+        }
+      });
+      /*while (true) {
+        */ /*try {
+          await fullLogFetch(map);
+        } catch (Exception) {
+
+        }*/ /*
+        sleep(const Duration(seconds: 20));
+      }*/
+      // }
+      // add a little delay to simulate some work being done
+      // Future.delayed(const Duration(milliseconds: 100), () {
+      //   // send a message back to the caller on their port,
+      //   // like calling them back after they left us a message
+      //   // (or if you prefer, they sent us a text message, and
+      //   // now we’re texting them a reply)
+      //   replyToPort.send('echo said: ' + data);
+      // });
+      //while(ourReceivePort.)
+      // you can close the ReceivePort if you want
+      //if (data == "bye") ourReceivePort.close();
+    }
+  }
+
+  static Future<void> fullLogFetch(Map argsMap) async {
+    String echoVRIP = argsMap['echoVRIP'];
+    String replayFilePath = argsMap['replayFilePath'];
+    String replayFilename = argsMap['replayFilename'];
+    bool saveReplays = argsMap['saveReplays'];
+    try {
+      //log(echoVRIP);
+      final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
+      if (response.statusCode == 200) {
+        // If the server did return a 200 OK response,
+        // then parse the JSON.
+        // setState(() {
+        try {
+          String rawJSON = response.body;
+          // var newFrame = APIFrame.fromJson(jsonDecode(rawJSON));
+
+          try {
+            // switched match
+            // if (lastFrame.sessionid == null ||
+            //     lastFrame.sessionip != newFrame.sessionip) {}
+
+            // if (lastFrame.game_status == "post_match") {
+            //   // newFilename();
+            // }
+            if (saveReplays) {
+              if (!true) {
+                //getFilePermissions();
+                // code of read or write file in external storage (SD card)
+              } else {
+                saveReplayFrame(replayFilePath, replayFilename, rawJSON);
+              }
+            }
+            // Do something with the file.
+          } catch (Exception) {
+            print('Failed to process API data');
+          }
+          // lastFrame = newFrame;
+        } catch (Exception) {
+          print('Failed to parse API response');
+        }
+        // });
+      } else {
+        if (saveReplays) {
+          if (!true) {
+            //getFilePermissions();
+            // code of read or write file in external storage (SD card)
+          } else {
+            await saveReplayFrame(
+                replayFilePath, replayFilename, 'NOT IN GAME');
+          }
+        }
+        // If the server did not return a 200 OK response,
+        // then throw an exception.
+        // throw Exception('Failed to get game data');
+      }
+    } catch (SocketException) {
+      if (saveReplays) {
+        if (!true) {
+          //getFilePermissions();
+          // code of read or write file in external storage (SD card)
+        } else {
+          //newFilename();
+          saveReplayFrame(replayFilePath, replayFilename, 'NOT IN MATCH');
+        }
+      }
+      //print('Not in game');
+    }
+  }
+
+  static Future<void> saveReplayFrame(
+      String replayFilePath, String replayFilename, String data) async {
+    // generate the timestamp string
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
+    final String formattedNow = formatter.format(now);
+
+    // the file we are saving to
+    File file = File(p.join(replayFilePath, replayFilename));
+
+    // create file if it doesn't exist
+    if (!(await file.exists())) {
+      file.create(recursive: true);
+    }
+
+    // write the data
+    file.writeAsString('$formattedNow\t$data\n', mode: FileMode.append);
+  }
+
+  Future<void> getFilePermissions() async {
+    storageAuthorized = false;
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      storageAuthorized = true;
+    } else {
+      PermissionStatus permissionResult = await Permission.storage.status;
+      storageAuthorized = permissionResult.isGranted;
+    }
+    if (!storageAuthorized) {
+      // Either the permission was already granted before or the user just granted it.
+      if (await Permission.storage.request().isGranted) {
+        storageAuthorized = true;
+      }
+    }
+    // We didn't ask for permission yet or the permission has been denied before but not permanently.
+    if (storageAuthorized) {
+      await getReplayFilePath();
+      if (Settings().saveReplays) {
+        await newFilename();
+      }
+      try {
+        final myDir = Directory('$replayFilePath');
+        if (!await myDir.exists()) {
+          await myDir.create();
+        }
+        fileList = Directory("$replayFilePath").listSync();
+      } catch (Exception) {
+        fileList = new List();
+      }
+      // code of read or write file in external storage (SD card)
+    }
   }
 
   Future<void> getEchoVRIP() async {
@@ -126,10 +392,41 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     super.dispose();
   }
 
+  Future<void> newFilename() async {
+    // lock(fileWritingLock) {
+    String lastFilename = replayFilename;
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat("yyyy-MM-dd_HH-mm-ss");
+    replayFilename = 'rec_${formatter.format(now)}.echoreplay';
+    print(replayFilename);
+    if (true) //(Settings.Default.useCompression)
+    {
+      if ((File(p.join(replayFilePath, lastFilename)).existsSync())) {
+        final file = File(p.join(replayFilePath, lastFilename));
+        var encoder = ZipFileEncoder();
+        encoder.create(
+            '${p.join(replayFilePath, lastFilename)}_ZIPPED.echoreplay');
+        encoder.addFile(file);
+        encoder.close();
+        try {
+          await file.delete();
+        } catch (e) {}
+      }
+    }
+    // if(!(File('$replayFilePath$replayFilename').existsSync())){
+    //     new File('$replayFilePath$replayFilename').createSync(recursive: true);
+    //     }
+    // if(File(replayFilename).exists() )
+    // }
+    final myDir = Directory('$replayFilePath');
+    if (!await myDir.exists()) {
+      await myDir.create(recursive: true);
+    }
+    fileList = Directory("$replayFilePath").listSync();
+  }
+
   void fetchAPI() async {
-    // return;
     try {
-      log(echoVRIP);
       final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
@@ -158,21 +455,63 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
                     i);
               }
             }
+            if (lastFrame.game_status == "post_match") {
+              // newFilename();
+            }
+            /*final DateTime now = DateTime.now();
+          final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
+          final String formattedNow = formatter.format(now);
+          print(formattedNow);
+          if (Settings().saveReplays) {
+            if (!permissionResult.isGranted) {
+              getFilePermissions();
+              // code of read or write file in external storage (SD card)
+            } else {
+              if (!(await File('$replayFilePath$replayFilename').exists())) {
+                new File('$replayFilePath$replayFilename').create(
+                    recursive: true);
+              }
+              var file = await File('$replayFilePath$replayFilename')
+                  .writeAsString('$formattedNow \t ${newFrame.toString()}\n', mode: FileMode.append);
+            }
+          }*/
+            // Do something with the file.
           } catch (Exception) {
             print('Failed to process API data');
+            inGame = false;
           }
           lastFrame = newFrame;
+          inGame = true;
         } catch (Exception) {
           print('Failed to parse API response');
+          inGame = false;
         }
         // });
       } else {
-        // If the server did not return a 200 OK response,
-        // then throw an exception.
-        // throw Exception('Failed to get game data');
+        inGame = false;
+        /*if (Settings().saveReplays) {
+        if (!permissionResult.isGranted) {
+          getFilePermissions();
+          // code of read or write file in external storage (SD card)
+        } else {
+          newFilename();
+        }*/
       }
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+      // throw Exception('Failed to get game data');
+
     } catch (SocketException) {
+      if (Settings().saveReplays) {
+        if (!storageAuthorized) {
+          getFilePermissions();
+          // code of read or write file in external storage (SD card)
+        } else {
+          //newFilename();
+        }
+      }
       print('Not in game');
+      inGame = false;
     }
   }
 
@@ -204,9 +543,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       // then parse the JSON.
       setState(() {
         if (teamIndex == 0) {
-          orangeVRMLTeamInfo = jsonDecode(response.body);
-        } else if (teamIndex == 1) {
           blueVRMLTeamInfo = jsonDecode(response.body);
+        } else if (teamIndex == 1) {
+          orangeVRMLTeamInfo = jsonDecode(response.body);
         }
       });
     } else {
@@ -216,17 +555,17 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     }
   }
 
-  // void getSharedPrefs() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   setState(() {
-  //     atlasLinkStyle = prefs.getInt('atlasLinkStyle');
-  //     atlasLinkUseAngleBrackets =
-  //         prefs.getBool('atlasLinkUseAngleBrackets') ?? true;
-  //     atlasLinkAppendTeamNames =
-  //         prefs.getBool('atlasLinkAppendTeamNames') ?? false;
-  //     echoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
-  //   });
-  // }
+// void getSharedPrefs() async {
+//   SharedPreferences prefs = await SharedPreferences.getInstance();
+//   setState(() {
+//     atlasLinkStyle = prefs.getInt('atlasLinkStyle');
+//     atlasLinkUseAngleBrackets =
+//         prefs.getBool('atlasLinkUseAngleBrackets') ?? true;
+//     atlasLinkAppendTeamNames =
+//         prefs.getBool('atlasLinkAppendTeamNames') ?? false;
+//     echoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
+//   });
+// }
 
   @override
   Widget build(BuildContext context) {
@@ -244,20 +583,21 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     var bottomNavigationItems = <BottomNavigationBarItem>[
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
-      BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Atlas"),
-      // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
+      BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Links"),
+      BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
     ];
 
     List<Widget> _tabViews = [
-      DashboardWidget(lastFrame, lastIPLocationResponse, orangeVRMLTeamInfo,
-          blueVRMLTeamInfo),
+      DashboardWidget(inGame, lastFrame, lastIPLocationResponse,
+          orangeVRMLTeamInfo, blueVRMLTeamInfo),
       AtlasWidget(
         frame: lastFrame,
         ipLocation: lastIPLocationResponse,
       ),
+      ReplayWidget(replayFilePath),
       // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
       SettingsWidget(echoVRIP: echoVRIP, setEchoVRIP: setEchoVRIP),
@@ -293,6 +633,7 @@ class Settings with ChangeNotifier {
   int atlasLinkStyle = 0;
   bool atlasLinkUseAngleBrackets = true;
   bool atlasLinkAppendTeamNames = false;
+  bool saveReplays = true;
   String clientName = ''; // doesn't need to notify others usually
 
   Settings() {
@@ -304,6 +645,12 @@ class Settings with ChangeNotifier {
   //   echoVRIP = value;
   //   notifyListeners();
   // }
+
+  void setSaveReplays(bool value) {
+    saveReplays = value;
+    notifyListeners();
+    save();
+  }
 
   void setAtlasLinkUseAngleBrackets(bool value) {
     atlasLinkUseAngleBrackets = value;
@@ -371,7 +718,10 @@ class Settings with ChangeNotifier {
         blueName = blueVRMLTeamInfo['team_name'];
       }
 
-      link = "$link $orangeName vs $blueName";
+      // if at least one team name exists
+      if (orangeName != '?' || blueName != '?') {
+        link = "$link $orangeName vs $blueName";
+      }
     }
 
     return link;
@@ -382,6 +732,7 @@ class Settings with ChangeNotifier {
     prefs.setInt('atlasLinkStyle', atlasLinkStyle);
     prefs.setBool('atlasLinkUseAngleBrackets', atlasLinkUseAngleBrackets);
     prefs.setBool('atlasLinkAppendTeamNames', atlasLinkAppendTeamNames);
+    prefs.setBool('saveReplays', saveReplays);
   }
 
   Future<void> load() async {
@@ -392,6 +743,8 @@ class Settings with ChangeNotifier {
       atlasLinkUseAngleBrackets = prefs.getBool('atlasLinkUseAngleBrackets');
     if (prefs.getBool('atlasLinkAppendTeamNames') != null)
       atlasLinkAppendTeamNames = prefs.getBool('atlasLinkAppendTeamNames');
+    if (prefs.getBool('saveReplays') != null)
+      saveReplays = prefs.getBool('saveReplays');
   }
 }
 

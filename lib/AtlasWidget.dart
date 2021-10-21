@@ -171,12 +171,17 @@ class AtlasState extends State<AtlasWidget> {
                                   columns: const <DataColumn>[
                                     DataColumn(label: Text('Orange Team')),
                                   ],
-                                  rows: match['orange_team']
-                                      .map<DataRow>(
-                                          (p) => DataRow(cells: <DataCell>[
-                                                DataCell(Text(p)),
-                                              ]))
-                                      .toList(),
+                                  rows: (() {
+                                    if (match['orange_team'] == '[]') {
+                                      match['orange_team'] = [];
+                                    }
+                                    return match['orange_team']
+                                        .map<DataRow>(
+                                            (p) => DataRow(cells: <DataCell>[
+                                                  DataCell(Text(p)),
+                                                ]))
+                                        .toList();
+                                  }()),
                                   columnSpacing: 10,
                                   dataRowHeight: 35,
                                   headingRowHeight: 40,
@@ -187,12 +192,17 @@ class AtlasState extends State<AtlasWidget> {
                                   columns: const <DataColumn>[
                                     DataColumn(label: Text('Blue Team')),
                                   ],
-                                  rows: match['blue_team']
-                                      .map<DataRow>(
-                                          (p) => DataRow(cells: <DataCell>[
-                                                DataCell(Text(p)),
-                                              ]))
-                                      .toList(),
+                                  rows: (() {
+                                    if (match['blue_team'] == '[]') {
+                                      match['blue_team'] = [];
+                                    }
+                                    return match['blue_team']
+                                        .map<DataRow>(
+                                            (p) => DataRow(cells: <DataCell>[
+                                                  DataCell(Text(p)),
+                                                ]))
+                                        .toList();
+                                  }()),
                                   columnSpacing: 10,
                                   dataRowHeight: 35,
                                   headingRowHeight: 40,
