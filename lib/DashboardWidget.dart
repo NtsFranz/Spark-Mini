@@ -6,7 +6,8 @@ import 'package:share_plus/share_plus.dart';
 import 'main.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
-import 'package:latlong/latlong.dart';
+import 'package:latlong2/latlong.dart';
+// import 'package:latlong/latlong.dart';
 
 class DashboardWidget extends StatelessWidget {
   final bool inGame;
@@ -111,9 +112,10 @@ class DashboardWidget extends StatelessWidget {
                               height: 200,
                               child: FlutterMap(
                                 options: MapOptions(
-                                    center: latLon,
-                                    zoom: 3.5,
-                                    interactive: false),
+                                  center: latLon,
+                                  zoom: 3.5,
+                                  // interactive: false
+                                ),
                                 layers: [
                                   TileLayerOptions(
                                       urlTemplate:
@@ -176,7 +178,7 @@ class DashboardWidget extends StatelessWidget {
                                   textScaleFactor: 2,
                                   textAlign: TextAlign.center,
                                 ),
-                                color: Colors.orange.withOpacity(.5),
+                                color: Colors.orange.withOpacity(.75),
                                 elevation: 5,
                                 margin: EdgeInsets.all(12),
                                 shape: RoundedRectangleBorder(
@@ -197,7 +199,7 @@ class DashboardWidget extends StatelessWidget {
                                   textScaleFactor: 2,
                                   textAlign: TextAlign.center,
                                 ),
-                                color: Colors.blue.withOpacity(.5),
+                                color: Colors.blue.withOpacity(.75),
                                 elevation: 5,
                                 margin: EdgeInsets.all(8),
                                 shape: RoundedRectangleBorder(
@@ -471,7 +473,7 @@ class DashboardWidget extends StatelessWidget {
                             ),
                             subtitle: Text(() {
                               if (frame.teams[1].players != null) {
-                                return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
+                                return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
                               } else {
                                 return '';
                               }
@@ -487,7 +489,7 @@ class DashboardWidget extends StatelessWidget {
                                 DataColumn(label: Text('Steals')),
                                 DataColumn(label: Text('Stuns')),
                               ],
-                              rows: frame.teams[0].players
+                              rows: frame.teams[1].players
                                   .map<DataRow>((p) =>
                                       DataRow(cells: <DataCell>[
                                         DataCell(Text(p.name)),
@@ -539,7 +541,7 @@ class DashboardWidget extends StatelessWidget {
                               style: TextStyle(color: Colors.blue),
                             ),
                             subtitle: Text(() {
-                              if (frame.teams[1].players != null) {
+                              if (frame.teams[0].players != null) {
                                 return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
                               } else {
                                 return '';
@@ -556,7 +558,7 @@ class DashboardWidget extends StatelessWidget {
                                 DataColumn(label: Text('Steals')),
                                 DataColumn(label: Text('Stuns')),
                               ],
-                              rows: frame.teams[1].players
+                              rows: frame.teams[0].players
                                   .map<DataRow>((p) =>
                                       DataRow(cells: <DataCell>[
                                         DataCell(Text(p.name)),

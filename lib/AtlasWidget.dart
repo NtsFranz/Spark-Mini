@@ -41,26 +41,12 @@ class AtlasState extends State<AtlasWidget> {
                 widget.frame.private_match) {
               return Container(
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      primary: Colors.red, padding: EdgeInsets.all(24)),
                   onPressed: (() {
                     hostMatch(widget.frame, widget.ipLocation);
                   }),
-                  child: Text('Host Match'),
-                ),
-                margin: EdgeInsets.all(8),
-              );
-            } else {
-              return Container();
-            }
-          }()),
-          (() {
-            if (widget.frame.private_match != null &&
-                widget.frame.private_match) {
-              return Container(
-                child: ElevatedButton(
-                  onPressed: (() {
-                    unhostMatch(widget.frame);
-                  }),
-                  child: Text('Remove Hosted Match'),
+                  child: Text('Post Match'),
                 ),
                 margin: EdgeInsets.all(8),
               );
@@ -74,6 +60,35 @@ class AtlasState extends State<AtlasWidget> {
                 )),
                 margin: EdgeInsets.all(20),
               );
+            }
+          }()),
+          (() {
+            var matches = <dynamic>[];
+            if (igniteAtlasMatches != null &&
+                igniteAtlasMatches.containsKey('matches')) {
+              matches = matches + igniteAtlasMatches['matches'];
+            }
+            if (ogAtlasMatches != null &&
+                ogAtlasMatches.containsKey('matches')) {
+              matches = matches + ogAtlasMatches['matches'];
+            }
+
+            if (widget.frame.private_match != null &&
+                widget.frame.private_match &&
+                matches.length > 0) {
+              return Container(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      primary: Colors.red, padding: EdgeInsets.all(14)),
+                  onPressed: (() {
+                    unhostMatch(widget.frame);
+                  }),
+                  child: Text('Remove Posted Match'),
+                ),
+                margin: EdgeInsets.all(8),
+              );
+            } else {
+              return Container();
             }
           }()),
           (() {
@@ -93,140 +108,159 @@ class AtlasState extends State<AtlasWidget> {
                 ogAtlasMatches.containsKey('matches')) {
               matches = matches + ogAtlasMatches['matches'];
             }
-            return Column(
-              children: matches
-                  .map<Card>((match) => Card(
-                        child:
-                            Column(mainAxisSize: MainAxisSize.min, children: <
-                                Widget>[
-                          Container(
-                            margin: EdgeInsets.all(8),
-                            child: Row(
-                              children: [
-                                Text(
-                                  match['username'],
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                (() {
-                                  if (match['server_location'] != null) {
-                                    return Text(match['server_location']);
-                                  } else {
-                                    return Text('From Atlas app');
-                                  }
-                                }()),
-                                Consumer<Settings>(
-                                    builder: (context, settings, child) =>
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            String link =
-                                                settings.getFormattedLink(
-                                                    match['matchid'],
-                                                    match['blue_team_info'],
-                                                    match['orange_team_info']);
-                                            Clipboard.setData(
-                                                new ClipboardData(text: link));
-                                            Scaffold.of(context)
-                                                .showSnackBar(SnackBar(
-                                              content: Text(link),
-                                            ));
-                                          },
-                                          child: Row(children: [
-                                            Text("Copy Join Link"),
-                                            Container(
-                                                margin: EdgeInsets.all(4),
-                                                child: Icon(
-                                                  Icons.copy,
-                                                  size: 16,
-                                                ))
-                                          ]),
-                                          style: ElevatedButton.styleFrom(
-                                            primary:
-                                                Colors.black12, // background
-                                            onPrimary:
-                                                Colors.white, // foreground
-                                          ),
-                                        ))
-                              ],
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+
+            if (matches.length > 0) {
+              return Column(
+                children: matches
+                    .map<Card>((match) => Card(
+                          child:
+                              Column(mainAxisSize: MainAxisSize.min, children: <
+                                  Widget>[
+                            Container(
+                              margin: EdgeInsets.all(8),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    match['username'],
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  (() {
+                                    if (match['server_location'] != null) {
+                                      return Text(match['server_location']);
+                                    } else {
+                                      return Text('From Atlas app');
+                                    }
+                                  }()),
+                                  Consumer<Settings>(
+                                      builder: (context, settings, child) =>
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              String link =
+                                                  settings.getFormattedLink(
+                                                      match['matchid'],
+                                                      match['blue_team_info'],
+                                                      match[
+                                                          'orange_team_info']);
+                                              Clipboard.setData(
+                                                  new ClipboardData(
+                                                      text: link));
+                                              Scaffold.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                content: Text(link),
+                                              ));
+                                            },
+                                            child: Row(children: [
+                                              Text("Copy Join Link"),
+                                              Container(
+                                                  margin: EdgeInsets.all(4),
+                                                  child: Icon(
+                                                    Icons.copy,
+                                                    size: 16,
+                                                  ))
+                                            ]),
+                                            style: ElevatedButton.styleFrom(
+                                              primary:
+                                                  Colors.black12, // background
+                                              onPrimary:
+                                                  Colors.white, // foreground
+                                            ),
+                                          ))
+                                ],
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                              ),
                             ),
-                          ),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                (() {
-                                  if (match['orange_team_info'] != null &&
-                                      match['orange_team_info']['team_logo'] !=
-                                          '') {
-                                    return Container(
-                                      child: Image.network(
-                                          match['orange_team_info']
-                                              ['team_logo']),
-                                      height: 50,
-                                    );
-                                  } else {
-                                    return Icon(Icons.person);
-                                  }
-                                }()),
-                                DataTable(
-                                  columns: const <DataColumn>[
-                                    DataColumn(label: Text('Orange Team')),
-                                  ],
-                                  rows: (() {
-                                    if (match['orange_team'] == '[]') {
-                                      match['orange_team'] = [];
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  (() {
+                                    if (match['orange_team_info'] != null &&
+                                        match['orange_team_info']
+                                                ['team_logo'] !=
+                                            '') {
+                                      return Container(
+                                        child: Image.network(
+                                            match['orange_team_info']
+                                                ['team_logo']),
+                                        height: 50,
+                                      );
+                                    } else {
+                                      return Icon(Icons.person);
                                     }
-                                    return match['orange_team']
-                                        .map<DataRow>(
-                                            (p) => DataRow(cells: <DataCell>[
-                                                  DataCell(Text(p)),
-                                                ]))
-                                        .toList();
                                   }()),
-                                  columnSpacing: 10,
-                                  dataRowHeight: 35,
-                                  headingRowHeight: 40,
-                                  headingTextStyle:
-                                      TextStyle(color: Colors.orange),
-                                ),
-                                DataTable(
-                                  columns: const <DataColumn>[
-                                    DataColumn(label: Text('Blue Team')),
-                                  ],
-                                  rows: (() {
-                                    if (match['blue_team'] == '[]') {
-                                      match['blue_team'] = [];
+                                  DataTable(
+                                    columns: const <DataColumn>[
+                                      DataColumn(label: Text('Orange Team')),
+                                    ],
+                                    rows: (() {
+                                      if (match['orange_team'] == '[]') {
+                                        match['orange_team'] = [];
+                                      }
+                                      return match['orange_team']
+                                          .map<DataRow>(
+                                              (p) => DataRow(cells: <DataCell>[
+                                                    DataCell(Text(p)),
+                                                  ]))
+                                          .toList();
+                                    }()),
+                                    columnSpacing: 10,
+                                    dataRowHeight: 35,
+                                    headingRowHeight: 40,
+                                    headingTextStyle:
+                                        TextStyle(color: Colors.orange),
+                                  ),
+                                  DataTable(
+                                    columns: const <DataColumn>[
+                                      DataColumn(label: Text('Blue Team')),
+                                    ],
+                                    rows: (() {
+                                      if (match['blue_team'] == '[]') {
+                                        match['blue_team'] = [];
+                                      }
+                                      return match['blue_team']
+                                          .map<DataRow>(
+                                              (p) => DataRow(cells: <DataCell>[
+                                                    DataCell(Text(p)),
+                                                  ]))
+                                          .toList();
+                                    }()),
+                                    columnSpacing: 10,
+                                    dataRowHeight: 35,
+                                    headingRowHeight: 40,
+                                    headingTextStyle:
+                                        TextStyle(color: Colors.blue),
+                                  ),
+                                  (() {
+                                    if (match['blue_team_info'] != null &&
+                                        match['blue_team_info']['team_logo'] !=
+                                            '') {
+                                      return Container(
+                                        child: Image.network(
+                                            match['blue_team_info']
+                                                ['team_logo']),
+                                        height: 50,
+                                      );
+                                    } else {
+                                      return Icon(Icons.person);
                                     }
-                                    return match['blue_team']
-                                        .map<DataRow>(
-                                            (p) => DataRow(cells: <DataCell>[
-                                                  DataCell(Text(p)),
-                                                ]))
-                                        .toList();
-                                  }()),
-                                  columnSpacing: 10,
-                                  dataRowHeight: 35,
-                                  headingRowHeight: 40,
-                                  headingTextStyle:
-                                      TextStyle(color: Colors.blue),
-                                ),
-                                (() {
-                                  if (match['blue_team_info'] != null &&
-                                      match['blue_team_info']['team_logo'] !=
-                                          '') {
-                                    return Container(
-                                      child: Image.network(
-                                          match['blue_team_info']['team_logo']),
-                                      height: 50,
-                                    );
-                                  } else {
-                                    return Icon(Icons.person);
-                                  }
-                                }())
-                              ]),
-                        ]),
-                      ))
-                  .toList(),
-            );
+                                  }())
+                                ]),
+                          ]),
+                        ))
+                    .toList(),
+              );
+            } else {
+              return Container(
+                child: Center(
+                    child: Text(
+                  'No available matches.\nUse the button in the bottom right to refresh.',
+                  textScaleFactor: 1.3,
+                  textAlign: TextAlign.center,
+                )),
+                margin: EdgeInsets.all(20),
+              );
+            }
           }()),
         ],
       ),
@@ -238,6 +272,7 @@ class AtlasState extends State<AtlasWidget> {
           },
           child: const Icon(Icons.refresh),
           tooltip: "Refresh Matches",
+          backgroundColor: Colors.red,
         ),
       ),
     );

@@ -1,10 +1,12 @@
 import 'dart:developer';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:spark_mini/theme/IgniteTheme.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'ReplayWidget.dart';
@@ -36,10 +38,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Spark Mini',
+      // theme: IgniteTheme.darkTheme,
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: Colors.red,
-        accentColor: Colors.orangeAccent,
       ),
       home: MyHomePage(
         title: 'Spark Mini',
@@ -74,6 +76,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   // final RestorableString _echoVRIP = RestorableString('127.0.0.1');
   String echoVRIP = '127.0.0.1';
+  String echoVRPort = '6721';
 
   // int atlasLinkStyle = 0;
   // bool atlasLinkUseAngleBrackets = false;
@@ -125,10 +128,13 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     getFilePermissions();
     Map map = Map();
     map['echoVRIP'] = echoVRIP;
+    map['echoVRPort'] = echoVRPort;
     map['replayFilePath'] = replayFilePath;
     map['replayFilename'] = replayFilename;
     map['saveReplays'] = Settings().saveReplays;
-    initLogIsolate();
+
+    // initLogIsolate();
+
     //compute(computeFunction, map);
     /*var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
       compute(fullLogFetch, map);
@@ -138,6 +144,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       setState(() {});
     });
     getEchoVRIP();
+    getEchoVRPort();
   }
 
   initLogIsolate() async {
@@ -149,6 +156,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       'message 1',
       logIsolateReceivePort2.sendPort,
       echoVRIP,
+      echoVRPort,
       replayFilePath,
       replayFilename,
       Settings().saveReplays
@@ -197,11 +205,13 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       print('echo received "$data"');
       SendPort replyToPort = msg[1]; // the 2nd element should be their port
       String echoVRIP = msg[2];
-      String replayFilePath = msg[3];
-      String replayFilename = msg[4];
-      bool saveReplays = msg[5];
+      String echoVRPort = msg[3];
+      String replayFilePath = msg[4];
+      String replayFilename = msg[5];
+      bool saveReplays = msg[6];
       Map map = Map();
       map['echoVRIP'] = echoVRIP;
+      map['echoVRPort'] = echoVRPort;
       map['replayFilePath'] = replayFilePath;
       map['replayFilename'] = replayFilename;
       map['saveReplays'] = saveReplays;
@@ -243,12 +253,14 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   static Future<void> fullLogFetch(Map argsMap) async {
     String echoVRIP = argsMap['echoVRIP'];
+    String echoVRPort = argsMap['echoVRPort'];
     String replayFilePath = argsMap['replayFilePath'];
     String replayFilename = argsMap['replayFilename'];
     bool saveReplays = argsMap['saveReplays'];
     try {
       //log(echoVRIP);
-      final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
+      final response =
+          await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
@@ -376,12 +388,34 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     }
   }
 
+  Future<void> getEchoVRPort() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    try {
+      String newEchoVRPort = prefs.getString('echoVRPort') ?? '6721';
+      setState(() {
+        echoVRPort = newEchoVRPort;
+      });
+    } catch (Exception) {
+      setState(() {
+        echoVRPort = '6721';
+      });
+    }
+  }
+
   Future<void> setEchoVRIP(String value) async {
     setState(() {
       echoVRIP = value;
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('echoVRIP', value);
+  }
+
+  Future<void> setEchoVRPort(String value) async {
+    setState(() {
+      echoVRPort = value;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('echoVRPort', value);
   }
 
   @override
@@ -427,7 +461,8 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   void fetchAPI() async {
     try {
-      final response = await http.get(Uri.http('$echoVRIP:6721', 'session'));
+      final response =
+          await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
@@ -533,10 +568,12 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   }
 
   void getTeamnameFromPlayerList(List<String> players, int teamIndex) async {
-    final response = await http.get(Uri.https(
+    String playersList = jsonEncode(players);
+    var uri = Uri.https(
         'ignitevr.gg',
         'cgi-bin/EchoStats.cgi/get_team_name_from_list',
-        {'player_list': '${jsonEncode(players)}'}));
+        {'player_list': '$playersList'});
+    final response = await http.get(uri);
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
@@ -576,15 +613,13 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
 
-    final colorScheme = Theme.of(context).colorScheme;
-
     // getSharedPrefs();
 
     var bottomNavigationItems = <BottomNavigationBarItem>[
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
       BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Links"),
-      BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
+      // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
@@ -597,27 +632,31 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         frame: lastFrame,
         ipLocation: lastIPLocationResponse,
       ),
-      ReplayWidget(replayFilePath),
+      // ReplayWidget(replayFilePath),
       // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
-      SettingsWidget(echoVRIP: echoVRIP, setEchoVRIP: setEchoVRIP),
+      SettingsWidget(
+          echoVRIP: echoVRIP,
+          setEchoVRIP: setEchoVRIP,
+          echoVRPort: echoVRPort,
+          setEchoVRPort: setEchoVRPort),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
+          // Here we take the value from the MyHomePage object that was created by
+          // the App.build method, and use it to set our appbar title.
+          title: Text(widget.title),
+          backgroundColor: Colors.red),
       body: _tabViews[_currentPage.value],
       bottomNavigationBar: BottomNavigationBar(
         showUnselectedLabels: true,
         items: bottomNavigationItems,
         currentIndex: _currentPage.value,
         type: BottomNavigationBarType.fixed,
-        // selectedItemColor: colorScheme.onPrimary,
-        // unselectedItemColor: colorScheme.onPrimary.withOpacity(.5),
-        // backgroundColor: Colors.white10,
+        selectedItemColor: Colors.red,
+        // unselectedItemColor: Colors.white.withOpacity(.5),
+        // backgroundColor: Colors.black12,
         onTap: (index) {
           setState(() {
             _currentPage.value = index;

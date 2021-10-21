@@ -8,8 +8,16 @@ import 'main.dart';
 
 class SettingsWidget extends StatefulWidget {
   final setEchoVRIP;
+  final setEchoVRPort;
   final String echoVRIP;
-  SettingsWidget({Key key, this.echoVRIP, this.setEchoVRIP}) : super(key: key);
+  final String echoVRPort;
+  SettingsWidget(
+      {Key key,
+      this.echoVRIP,
+      this.setEchoVRIP,
+      this.echoVRPort,
+      this.setEchoVRPort})
+      : super(key: key);
 
   final List<String> linkTypes = <String>['Choose', 'Player', 'Spectator'];
 
@@ -79,6 +87,37 @@ class SettingsState extends State<SettingsWidget> {
                   SizedBox(
                     height: 10,
                   ),
+                  Row(children: <Widget>[
+                    Expanded(
+                      child: ListTile(
+                        leading: Icon(Icons.wifi_rounded),
+                        title: Text("Port (for PCVR)"),
+                        subtitle: Text(widget.echoVRPort),
+                      ),
+                    ),
+                    Container(
+                      width: 125,
+                      child: TextField(
+                        maxLength: 15,
+                        // controller:
+                        //     new TextEditingController(text: echoVRIP),
+                        keyboardType:
+                            TextInputType.numberWithOptions(decimal: true),
+                        cursorColor: Theme.of(context).primaryColor,
+                        decoration: inputDecoration,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (value) {
+                          widget.setEchoVRPort(value);
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 20,
+                    ),
+                  ]),
+                  SizedBox(
+                    height: 10,
+                  ),
                 ],
               )
             ]),
@@ -92,7 +131,7 @@ class SettingsState extends State<SettingsWidget> {
                     height: 10,
                   ),
                   Text(
-                    "Display",
+                    "Links",
                     style: TextStyle(
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold),
@@ -168,46 +207,46 @@ class SettingsState extends State<SettingsWidget> {
               )
             ]),
           ),
-          Card(
-              child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(
-                height: 10,
-              ),
-              Text(
-                "Replays",
-                style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(
-                width: 20,
-              ),
-              Row(children: [
-                Expanded(
-                  child: ListTile(
-                    title: Text("Save Replays"),
-                    subtitle: Text(
-                        "Replays are recorded in the .echoreplay file format, which contains all API data from the game. Echoreplay files to not contain any video or audio data. The most common use of .echoreplay files is in the Echo Replay Viewer"),
-                  ),
-                ),
-                Switch(
-                  value: settings.saveReplays,
-                  onChanged: (bool value) {
-                    settings.setSaveReplays(value);
-                  },
-                  activeColor: Theme.of(context).primaryColor,
-                ),
-                SizedBox(
-                  width: 20,
-                ),
-              ]),
-              SizedBox(
-                height: 10,
-              ),
-            ]),
-          ]))
+          // Card(
+          //     child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          //   Column(mainAxisSize: MainAxisSize.min, children: [
+          //     SizedBox(
+          //       height: 10,
+          //     ),
+          //     Text(
+          //       "Replays",
+          //       style: TextStyle(
+          //         color: Theme.of(context).primaryColor,
+          //         fontWeight: FontWeight.bold,
+          //       ),
+          //     ),
+          //     SizedBox(
+          //       width: 20,
+          //     ),
+          //     Row(children: [
+          //       Expanded(
+          //         child: ListTile(
+          //           title: Text("Save Replays"),
+          //           subtitle: Text(
+          //               "Replays are recorded in the .echoreplay file format, which contains all API data from the game. Echoreplay files to not contain any video or audio data. The most common use of .echoreplay files is in the Echo VR Replay Viewer"),
+          //         ),
+          //       ),
+          //       Switch(
+          //         value: settings.saveReplays,
+          //         onChanged: (bool value) {
+          //           settings.setSaveReplays(value);
+          //         },
+          //         activeColor: Theme.of(context).primaryColor,
+          //       ),
+          //       SizedBox(
+          //         width: 20,
+          //       ),
+          //     ]),
+          //     SizedBox(
+          //       height: 10,
+          //     ),
+          //   ]),
+          // ]))
         ]);
       }))
     ]);
