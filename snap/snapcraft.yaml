@@ -1,5 +1,5 @@
-name: spark_mini
-version: 1.0.0
+name: spark-mini
+version: 1.0.4
 summary: Spark Mini
 description: Non-Windows version of Spark
 
@@ -7,22 +7,22 @@ confinement: strict
 base: core18
 grade: stable
 
-slots:
-  dbus-spark_mini: # adjust accordingly to your app name
-    interface: dbus
-    bus: session
-    name: gg.ignitevr.spark_mini # adjust accordingly to your app name and
+# slots:
+#   dbus-spark-mini: # adjust accordingly to your app name
+#     interface: dbus
+#     bus: session
+#     name: gg.ignitevr.spark-mini # adjust accordingly to your app name and
     
 apps:
-  spark_mini:
+  spark-mini:
     command: spark_mini
     extensions: [flutter-master] # Where "master" defines which Flutter channel to use for the build
     plugs:
     - network
     slots:
-      - dbus-spark_mini
+      - dbus-spark-mini
 parts:
-  spark_mini:
+  spark-mini:
     source: .
     plugin: flutter
     flutter-target: lib/main.dart # The main entry-point file of the application

@@ -49,3 +49,5 @@ app.*.map.json
 .vscode/
 
 key.jks
+
+env/
