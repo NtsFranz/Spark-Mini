@@ -71,7 +71,7 @@ class SettingsState extends State<SettingsWidget> {
                         // controller:
                         //     new TextEditingController(text: echoVRIP),
                         keyboardType:
-                            TextInputType.numberWithOptions(decimal: true),
+                            TextInputType.numberWithOptions(signed: true, decimal: true),
                         cursorColor: Theme.of(context).primaryColor,
                         decoration: inputDecoration,
                         textInputAction: TextInputAction.done,
@@ -102,7 +102,7 @@ class SettingsState extends State<SettingsWidget> {
                         // controller:
                         //     new TextEditingController(text: echoVRIP),
                         keyboardType:
-                            TextInputType.numberWithOptions(decimal: true),
+                            TextInputType.numberWithOptions(signed: true, decimal: true),
                         cursorColor: Theme.of(context).primaryColor,
                         decoration: inputDecoration,
                         textInputAction: TextInputAction.done,
