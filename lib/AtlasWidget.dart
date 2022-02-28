@@ -27,7 +27,6 @@ class AtlasState extends State<AtlasWidget> {
   void initState() {
     super.initState();
     fetchIgniteAtlasMatches(widget.frame.client_name);
-    fetchOGAtlasMatches(widget.frame.client_name);
   }
 
   @override
@@ -267,7 +266,6 @@ class AtlasState extends State<AtlasWidget> {
       floatingActionButton: Consumer<Settings>(
         builder: (context, settings, child) => FloatingActionButton(
           onPressed: () {
-            fetchOGAtlasMatches(widget.frame.client_name);
             fetchIgniteAtlasMatches(widget.frame.client_name);
           },
           child: const Icon(Icons.refresh),
@@ -276,28 +274,6 @@ class AtlasState extends State<AtlasWidget> {
         ),
       ),
     );
-  }
-
-  void fetchOGAtlasMatches(String playerName) async {
-    setState(() {
-      fetchingOGAtlas = true;
-    });
-    final response = await http.post(
-        Uri.https('echovrconnect.appspot.com', 'api/v1/player/$playerName'));
-
-    if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
-      if (!mounted) return;
-      setState(() {
-        ogAtlasMatches = jsonDecode(response.body);
-        fetchingOGAtlas = false;
-      });
-    } else {
-      // If the server did not return a 200 OK response,
-      // then throw an exception.
-      throw Exception('Failed to get og atlas matches');
-    }
   }
 
   void fetchIgniteAtlasMatches(String playerName) async {

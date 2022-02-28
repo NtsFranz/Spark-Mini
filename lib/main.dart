@@ -26,7 +26,7 @@ void main() {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     setWindowTitle("Spark Mini");
     setWindowMinSize(Size(375, 750));
-    setWindowMaxSize(Size(600, 1000));
+    setWindowMaxSize(Size(1000, 1000));
   }
   runApp(
       ChangeNotifierProvider(create: (context) => Settings(), child: MyApp()));
@@ -133,7 +133,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     map['replayFilename'] = replayFilename;
     map['saveReplays'] = Settings().saveReplays;
 
-    // initLogIsolate();
+    initLogIsolate();
 
     //compute(computeFunction, map);
     /*var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
@@ -259,8 +259,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     bool saveReplays = argsMap['saveReplays'];
     try {
       //log(echoVRIP);
-      final response =
-          await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
+      final response = await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
@@ -619,7 +618,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
       BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Links"),
-      // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
+      BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
@@ -632,7 +631,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         frame: lastFrame,
         ipLocation: lastIPLocationResponse,
       ),
-      // ReplayWidget(replayFilePath),
+      ReplayWidget(replayFilePath),
       // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
       SettingsWidget(

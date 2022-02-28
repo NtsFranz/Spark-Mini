@@ -86,11 +86,11 @@ class IgniteStatsState extends State<IgniteStatsWidget> {
     return ListView(padding: const EdgeInsets.all(12), children: <Widget>[
             Container(
               child: SearchField(
-                suggestions: playerList,
+                // suggestions: playerList,
                 hint: 'Search for a Player',
                 onTap: (value) {
                   setState(() {
-                    playerName = value;
+                    playerName = value.item;
                   });
                 },
               ),

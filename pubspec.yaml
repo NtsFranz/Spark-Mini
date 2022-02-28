@@ -27,17 +27,17 @@ dependencies:
   http: ^0.13.0
   desktop_window: ^0.4.0
   # msix: ^0.1.18
-  settings_ui: ^0.6.0
+  settings_ui: ^2.0.2
   shared_preferences: ^2.0.4
-  provider: ^5.0.0
+  provider: ^6.0.2
   flutter_map: any
-  searchfield: ^0.5.2
-  json_annotation: 3.1.1
+  searchfield: ^0.6.2
+  json_annotation: ^4.4.0
   flutter_file_manager:
   permission_handler:
   path_provider: ^2.0.3
   open_file:
-  share_plus: ^2.1.4
+  share_plus: ^3.1.0
   intl:
   archive:
   # esys_flutter_share:
@@ -47,21 +47,20 @@ dependencies:
     git:
       url: git://github.com/google/flutter-desktop-embedding.git
       path: plugins/window_size
-      ref: 927f8cbc09b35d85245c095f2db8df9b186f6618
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
-  percent_indicator: "^2.1.7+2"
+  percent_indicator: "^4.0.0"
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   # flutter_launcher_icons: ^0.8.0
-  flutter_native_splash: ^1.1.7+1
+  flutter_native_splash: ^2.0.5
   # msix: ^0.1.5
   build_runner:
-  json_serializable: 3.5.1
+  json_serializable: ^6.1.4
 
 flutter_icons:
   android: "launcher_icon"
