@@ -88,11 +88,11 @@ class IgniteStatsState extends State<IgniteStatsWidget> {
               child: SearchField(
                 // suggestions: playerList,
                 hint: 'Search for a Player',
-                onTap: (value) {
-                  setState(() {
-                    playerName = value.item;
-                  });
-                },
+                // onTap: (value) {
+                //   setState(() {
+                //     playerName = value.item;
+                //   });
+                // },
               ),
             ),
             // ElevatedButton(

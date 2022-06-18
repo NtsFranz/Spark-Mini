@@ -1,12 +1,13 @@
 import 'dart:developer';
 import 'package:archive/archive_io.dart';
+import 'package:desktop_window/desktop_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'package:spark_mini/theme/IgniteTheme.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'ReplayWidget.dart';
@@ -14,7 +15,6 @@ import 'SettingsWidget.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:io';
-import 'package:window_size/window_size.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -24,12 +24,17 @@ import 'dart:isolate';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    setWindowTitle("Spark Mini");
-    setWindowMinSize(Size(375, 750));
-    setWindowMaxSize(Size(1000, 1000));
+    setMaxWindowSize();
   }
   runApp(
       ChangeNotifierProvider(create: (context) => Settings(), child: MyApp()));
+}
+
+Future setMaxWindowSize() async {
+  await DesktopWindow.setWindowSize(Size(560, 870));
+
+  await DesktopWindow.setMinWindowSize(Size(350, 570));
+  await DesktopWindow.setMaxWindowSize(Size(800, 1000));
 }
 
 class MyApp extends StatelessWidget {
@@ -259,7 +264,8 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     bool saveReplays = argsMap['saveReplays'];
     try {
       //log(echoVRIP);
-      final response = await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
+      final response =
+          await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
@@ -285,11 +291,11 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
               }
             }
             // Do something with the file.
-          } catch (Exception) {
+          } catch (e) {
             print('Failed to process API data');
           }
           // lastFrame = newFrame;
-        } catch (Exception) {
+        } catch (e) {
           print('Failed to parse API response');
         }
         // });
@@ -462,7 +468,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     try {
       final response =
           await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 500) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
         // setState(() {
@@ -470,29 +476,30 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
           var newFrame = APIFrame.fromJson(jsonDecode(response.body));
 
           try {
-            // switched match
-            if (lastFrame.sessionid == null ||
-                lastFrame.sessionip != newFrame.sessionip) {
-              getIPAPI(newFrame.sessionip);
-            }
-
-            // player joined or left (or switched match)
-            for (int i = 0; i < 2; i++) {
+            if (newFrame.sessionid != null) {
+              // switched match
               if (lastFrame.sessionid == null ||
-                  lastFrame.sessionip != newFrame.sessionip ||
-                  lastFrame.teams[i].players.length !=
-                      newFrame.teams[i].players.length) {
-                getTeamnameFromPlayerList(
-                    newFrame.teams[i].players
-                        .map<String>((p) => p.name)
-                        .toList(),
-                    i);
+                  lastFrame.sessionip != newFrame.sessionip) {
+                getIPAPI(newFrame.sessionip);
               }
-            }
-            if (lastFrame.game_status == "post_match") {
-              // newFilename();
-            }
-            /*final DateTime now = DateTime.now();
+
+              // player joined or left (or switched match)
+              for (int i = 0; i < 2; i++) {
+                if (lastFrame.sessionid == null ||
+                    lastFrame.sessionip != newFrame.sessionip ||
+                    lastFrame.teams[i].players.length !=
+                        newFrame.teams[i].players.length) {
+                  getTeamNameFromPlayerList(
+                      newFrame.teams[i].players
+                          .map<String>((p) => p.name)
+                          .toList(),
+                      i);
+                }
+              }
+              if (lastFrame.game_status == "post_match") {
+                // newFilename();
+              }
+              /*final DateTime now = DateTime.now();
           final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
           final String formattedNow = formatter.format(now);
           print(formattedNow);
@@ -509,19 +516,28 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
                   .writeAsString('$formattedNow \t ${newFrame.toString()}\n', mode: FileMode.append);
             }
           }*/
+            }
             // Do something with the file.
-          } catch (Exception) {
+          } catch (e) {
             print('Failed to process API data');
             inGame = false;
           }
           lastFrame = newFrame;
           inGame = true;
-        } catch (Exception) {
+        } catch (e) {
           print('Failed to parse API response');
           inGame = false;
         }
         // });
-      } else {
+      }
+      // else if (response.statusCode == 500) {
+      //   if (response.body.startsWith(
+      //       '{"err_description":"Endpoint is restricted in this match type","err_code":-6}')) {
+      //     // IN LOBBY
+      //     inGame = true;
+      //   }
+      // }
+      else {
         inGame = false;
         /*if (Settings().saveReplays) {
         if (!permissionResult.isGranted) {
@@ -544,14 +560,18 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
           //newFilename();
         }
       }
-      print('Not in game');
+      print('Not in game: $echoVRIP');
       inGame = false;
     }
   }
 
   void getIPAPI(String ip) async {
-    print('Fetching from ip-api');
-    final response = await http.get(Uri.http('ip-api.com', 'json/$ip'));
+    print('Fetching from Ignite ip-api');
+    if (ip == null || ip == "") {
+      return;
+    }
+    final response =
+        await http.get(Uri.http('api.ignitevr.gg', 'ip_geolocation/$ip'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
@@ -566,11 +586,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     }
   }
 
-  void getTeamnameFromPlayerList(List<String> players, int teamIndex) async {
+  void getTeamNameFromPlayerList(List<String> players, int teamIndex) async {
     String playersList = jsonEncode(players);
-    var uri = Uri.https(
-        'ignitevr.gg',
-        'cgi-bin/EchoStats.cgi/get_team_name_from_list',
+    var uri = Uri.https('api.ignitevr.gg', 'vrml/get_team_name_from_list',
         {'player_list': '$playersList'});
     final response = await http.get(uri);
 
@@ -626,7 +644,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
     List<Widget> _tabViews = [
       DashboardWidget(inGame, lastFrame, lastIPLocationResponse,
-          orangeVRMLTeamInfo, blueVRMLTeamInfo),
+          orangeVRMLTeamInfo, blueVRMLTeamInfo, setEchoVRIP),
       AtlasWidget(
         frame: lastFrame,
         ipLocation: lastIPLocationResponse,
@@ -787,6 +805,8 @@ class Settings with ChangeNotifier {
 }
 
 class APIFrame {
+  final int err_code;
+  final String err_description;
   final String sessionid;
   final String sessionip;
   final String game_status;
@@ -802,6 +822,8 @@ class APIFrame {
   final Map<String, dynamic> raw;
 
   APIFrame({
+    this.err_code,
+    this.err_description,
     this.sessionid,
     this.sessionip,
     this.game_status,
@@ -818,7 +840,37 @@ class APIFrame {
   });
 
   factory APIFrame.fromJson(Map<String, dynamic> json) {
+    var teamsMap = <APITeam>[
+      APITeam(team: "", players: <APIPlayer>[]),
+      APITeam(team: "", players: <APIPlayer>[]),
+      APITeam(team: "", players: <APIPlayer>[]),
+    ];
+    if (json['teams'] != null) {
+      teamsMap = json['teams']
+          .map<APITeam>((teamJSON) => APITeam.fromJson(teamJSON))
+          .toList();
+    }
+    var lastThrowMap = APILastThrow(
+        arm_speed: 0,
+        total_speed: 0,
+        off_axis_spin_deg: 0,
+        wrist_throw_penalty: 0,
+        rot_per_sec: 0,
+        pot_speed_from_rot: 0,
+        speed_from_arm: 0,
+        speed_from_movement: 0,
+        speed_from_wrist: 0,
+        wrist_align_to_throw_deg: 0,
+        throw_align_to_movement_deg: 0,
+        off_axis_penalty: 0,
+        throw_move_penalty: 0,
+    );
+    if (json['last_throw'] != null) {
+      lastThrowMap = APILastThrow.fromJson(json['last_throw']);
+    }
     return APIFrame(
+      err_code: json['err_code'],
+      err_description: json['err_description'],
       sessionid: json['sessionid'],
       sessionip: json['sessionip'],
       match_type: json['match_type'],
@@ -829,10 +881,8 @@ class APIFrame {
       game_clock_display: json['game_clock_display'],
       blue_points: json['blue_points'],
       orange_points: json['orange_points'],
-      teams: json['teams']
-          .map<APITeam>((teamJSON) => APITeam.fromJson(teamJSON))
-          .toList(),
-      last_throw: APILastThrow.fromJson(json['last_throw']),
+      teams: teamsMap,
+      last_throw: lastThrowMap,
       raw: json,
     );
   }

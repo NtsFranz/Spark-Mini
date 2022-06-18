@@ -1,13 +1,14 @@
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'main.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
-// import 'package:latlong/latlong.dart';
 
 class DashboardWidget extends StatelessWidget {
   final bool inGame;
@@ -15,6 +16,8 @@ class DashboardWidget extends StatelessWidget {
   final Map<String, dynamic> ipLocation;
   final Map<String, dynamic> orangeVRMLTeamInfo;
   final Map<String, dynamic> blueVRMLTeamInfo;
+  final setEchoVRIP;
+
   // String directory;
   // final List file;
   // final int atlasLinkStyle;
@@ -23,17 +26,69 @@ class DashboardWidget extends StatelessWidget {
   // final SharedPreferences prefs;
   // final Settings settings;
   DashboardWidget(this.inGame, this.frame, this.ipLocation,
-      this.orangeVRMLTeamInfo, this.blueVRMLTeamInfo);
+      this.orangeVRMLTeamInfo, this.blueVRMLTeamInfo, this.setEchoVRIP);
+
+  Future<String> findQuestIP() async {
+    final info = NetworkInfo();
+
+    var wifiIP = await info.getWifiIP(); // 192.168.1.43
+
+    var baseIP = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
+
+    var requests = <Future>[];
+    for (var i = 0; i < 255; i++) {
+      final ip = i;
+      requests.add(checkIP('$baseIP.$ip'));
+    }
+    requests.add(checkIP('127.0.0.1'));
+
+    final finalIP = await Future.any(requests);
+    // final successIndex = results.indexWhere((value) => value);
+    // var finalIP = "";
+    // if (successIndex == 255) {
+    //   finalIP = "127.0.0.1";
+    // } else if (successIndex > -1) {
+    //   finalIP = "$baseIP.$successIndex";
+    // }
+    print("Found EchoVR IP: $finalIP");
+    setEchoVRIP(finalIP);
+    return finalIP;
+  }
+
+  // Returns the IP parameter quickly if correct, slowly if not
+  Future<String> checkIP(String ip) async {
+    try {
+      final response = await http
+          .get(Uri.http('$ip:6721', 'session'))
+          .timeout(Duration(seconds: 5), onTimeout: () {
+        return http.Response('Error', 408);
+      });
+      if (response.statusCode == 408) {
+        print("Timed out: $ip");
+        return "";
+      } else {
+        print(response.statusCode);
+
+        print("SUCCESS: $ip");
+        return ip;
+      }
+    } on SocketException catch (e) {
+      print("Socket Exception: $ip");
+      print(e);
+      return ip;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (frame != null && frame.sessionid != null) {
+    if (frame != null && frame.err_code != null) {
       return Scaffold(
         body: ListView(
           padding: const EdgeInsets.all(8),
           children: <Widget>[
             (() {
               if (!inGame) {
+                // not in game
                 return Card(
                   child:
                       Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -46,109 +101,8 @@ class DashboardWidget extends StatelessWidget {
                   ]),
                   color: Colors.red,
                 );
-              } else {
-                return Container();
-              }
-            }()),
-            Card(
-              // shape: RoundedRectangleBorder(
-              //   borderRadius: BorderRadius.circular(15.0),
-              // ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Consumer<Settings>(
-                    builder: (context, settings, child) => ListTile(
-                      title: Text(settings.getFormattedLink(frame.sessionid,
-                          orangeVRMLTeamInfo, blueVRMLTeamInfo)),
-                      subtitle: Text('Click to copy to clipboard'),
-                      onTap: () {
-                        String link = settings.getFormattedLink(frame.sessionid,
-                            orangeVRMLTeamInfo, blueVRMLTeamInfo);
-                        Clipboard.setData(new ClipboardData(text: link));
-
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(link),
-                        ));
-                      },
-                      onLongPress: () {
-                        if (!Platform.isWindows) {
-                          Share.share(settings.getFormattedLink(frame.sessionid,
-                              orangeVRMLTeamInfo, blueVRMLTeamInfo));
-                        }
-                      },
-                    ),
-                  )
-                ],
-              ),
-            ),
-            Card(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  ExpansionTile(
-                    title: ListTile(
-                      title: Text('Server Location'),
-                      subtitle: Text((() {
-                        if (frame != null) {
-                          if (ipLocation != null &&
-                              ipLocation['status'] == 'success') {
-                            return '${ipLocation['city']}, ${ipLocation['region']}';
-                          } else {
-                            return 'IP: ${frame.sessionip}';
-                          }
-                        } else {
-                          return '---';
-                        }
-                      })()),
-                      leading: Icon(Icons.map),
-                    ),
-                    children: [
-                      (() {
-                        if (ipLocation != null && ipLocation['lat'] != null) {
-                          final LatLng latLon =
-                              LatLng(ipLocation['lat'], ipLocation['lon']);
-                          return Container(
-                              height: 200,
-                              child: FlutterMap(
-                                options: MapOptions(
-                                  center: latLon,
-                                  zoom: 3.5,
-                                  // interactive: false
-                                ),
-                                layers: [
-                                  TileLayerOptions(
-                                      urlTemplate:
-                                          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                                      subdomains: ['a', 'b', 'c']),
-                                  MarkerLayerOptions(
-                                    markers: [
-                                      Marker(
-                                        width: 10.0,
-                                        height: 10.0,
-                                        point: latLon,
-                                        builder: (ctx) => Container(
-                                          margin: EdgeInsets.all(0.0),
-                                          decoration: BoxDecoration(
-                                              color: Colors.red,
-                                              shape: BoxShape.circle),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ));
-                        } else {
-                          return Text('No location found');
-                        }
-                      }())
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            (() {
-              if (frame.match_type == "Social_2.0") {
+              } else if (frame.sessionid == null) {
+                // in lobby
                 return Card(
                   child:
                       Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -163,7 +117,117 @@ class DashboardWidget extends StatelessWidget {
                   ]),
                 );
               } else {
+                // in game
                 return Column(children: <Widget>[
+                  // spark link
+                  Card(
+                    // shape: RoundedRectangleBorder(
+                    //   borderRadius: BorderRadius.circular(15.0),
+                    // ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Consumer<Settings>(
+                          builder: (context, settings, child) => ListTile(
+                            title: Text(settings.getFormattedLink(
+                                frame.sessionid,
+                                orangeVRMLTeamInfo,
+                                blueVRMLTeamInfo)),
+                            subtitle: Text('Click to copy to clipboard'),
+                            onTap: () {
+                              String link = settings.getFormattedLink(
+                                  frame.sessionid,
+                                  orangeVRMLTeamInfo,
+                                  blueVRMLTeamInfo);
+                              Clipboard.setData(new ClipboardData(text: link));
+
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: Text(link),
+                              ));
+                            },
+                            onLongPress: () {
+                              if (!Platform.isWindows) {
+                                Share.share(settings.getFormattedLink(
+                                    frame.sessionid,
+                                    orangeVRMLTeamInfo,
+                                    blueVRMLTeamInfo));
+                              }
+                            },
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                  // server location
+                  Card(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        ExpansionTile(
+                          title: ListTile(
+                            title: Text('Server Location'),
+                            subtitle: Text((() {
+                              if (frame != null) {
+                                if (ipLocation != null &&
+                                    ipLocation['ip-api'] != null &&
+                                    ipLocation['ip-api']['status'] ==
+                                        'success') {
+                                  return '${ipLocation['ip-api']['city']}, ${ipLocation['ip-api']['region']}';
+                                } else {
+                                  return 'IP: ${frame.sessionip}';
+                                }
+                              } else {
+                                return '---';
+                              }
+                            })()),
+                            leading: Icon(Icons.map),
+                          ),
+                          children: [
+                            (() {
+                              if (ipLocation != null &&
+                                  ipLocation['lat'] != null) {
+                                final LatLng latLon = LatLng(
+                                    ipLocation['lat'], ipLocation['lon']);
+                                return Container(
+                                    height: 200,
+                                    child: FlutterMap(
+                                      options: MapOptions(
+                                        center: latLon,
+                                        zoom: 3.5,
+                                        // interactive: false
+                                      ),
+                                      layers: [
+                                        TileLayerOptions(
+                                            urlTemplate:
+                                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                            subdomains: ['a', 'b', 'c']),
+                                        MarkerLayerOptions(
+                                          markers: [
+                                            Marker(
+                                              width: 10.0,
+                                              height: 10.0,
+                                              point: latLon,
+                                              builder: (ctx) => Container(
+                                                margin: EdgeInsets.all(0.0),
+                                                decoration: BoxDecoration(
+                                                    color: Colors.red,
+                                                    shape: BoxShape.circle),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ));
+                              } else {
+                                return Text('No location found');
+                              }
+                            }())
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                   // points and time
                   Card(
                     child: Column(
@@ -626,11 +690,27 @@ class DashboardWidget extends StatelessWidget {
           //     itemBuilder: (BuildContext context, int index) {
           //       return Text(file[index].toString());
           //     }),
-          child: Text(
-            "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
-            textScaleFactor: 1.3,
-            textAlign: TextAlign.center,
-          ),
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text(
+                  "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
+                  textScaleFactor: 1.3,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 40),
+                ElevatedButton(
+                    onPressed: () {
+                      findQuestIP();
+                    },
+                    child:
+                        Text("Find Quest IP", style: TextStyle(fontSize: 18)),
+                    style: ElevatedButton.styleFrom(
+                      primary: Colors.red, // background
+                      onPrimary: Colors.white, // foreground
+                      padding: EdgeInsets.all(20),
+                    )),
+              ]),
         ),
       );
     }

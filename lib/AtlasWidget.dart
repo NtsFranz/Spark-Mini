@@ -144,10 +144,12 @@ class AtlasState extends State<AtlasWidget> {
                                               Clipboard.setData(
                                                   new ClipboardData(
                                                       text: link));
-                                              Scaffold.of(context)
-                                                  .showSnackBar(SnackBar(
-                                                content: Text(link),
-                                              ));
+                                              final snackBar = SnackBar(
+                                                  content: const Text("TEST"));
+                                              // Find the ScaffoldMessenger in the widget tree
+                                              // and use it to show a SnackBar.
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(snackBar);
                                             },
                                             child: Row(children: [
                                               Text("Copy Join Link"),
@@ -281,7 +283,7 @@ class AtlasState extends State<AtlasWidget> {
       fetchingIgniteAtlas = true;
     });
     final response = await http.get(Uri.https(
-        'ignitevr.gg', 'cgi-bin/EchoStats.cgi/atlas_matches_v2/$playerName'));
+        'api.ignitevr.gg', 'hosted_matches/$playerName'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
@@ -318,7 +320,7 @@ class AtlasState extends State<AtlasWidget> {
     data['visible_to_casters'] = true;
     if (ipLocation != null) {
       data['server_location'] =
-          '${ipLocation['city']}, ${ipLocation['regionName']}';
+          '${ipLocation['ip-api']['city']}, ${ipLocation['ip-api']['regionName']}';
     } else {
       data['server_location'] = '';
     }
@@ -340,7 +342,7 @@ class AtlasState extends State<AtlasWidget> {
     print(json.encode(data));
 
     final response = await http.post(
-        Uri.https('ignitevr.gg', 'cgi-bin/EchoStats.cgi/host_atlas_match_v2'),
+        Uri.https('api.ignitevr.gg', 'host_match'),
         headers: headers,
         body: json.encode(data));
 
@@ -393,7 +395,7 @@ class AtlasState extends State<AtlasWidget> {
     print(json.encode(data));
 
     final response = await http.post(
-        Uri.https('ignitevr.gg', 'cgi-bin/EchoStats.cgi/unhost_atlas_match_v2'),
+        Uri.https('api.ignitevr.gg', 'unhost_match'),
         headers: headers,
         body: json.encode(data));
 

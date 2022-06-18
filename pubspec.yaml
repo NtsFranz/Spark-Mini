@@ -15,7 +15,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.6+7
+version: 1.0.7+12
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -31,27 +31,24 @@ dependencies:
   shared_preferences: ^2.0.4
   provider: ^6.0.2
   flutter_map: any
-  searchfield: ^0.6.2
+  searchfield: ^0.6.6
   json_annotation: ^4.4.0
   flutter_file_manager:
   permission_handler:
   path_provider: ^2.0.3
-  open_file:
-  share_plus: ^3.1.0
+  open_file: ^3.2.1
+  share_plus: ^4.0.8
   intl:
   archive:
   # esys_flutter_share:
   #   git:
   #     url: git://github.com/jawad12345A/esys-flutter-share.git
-  window_size:
-    git:
-      url: git://github.com/google/flutter-desktop-embedding.git
-      path: plugins/window_size
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   percent_indicator: "^4.0.0"
+  network_info_plus: ^2.1.3
 
 dev_dependencies:
   flutter_test:

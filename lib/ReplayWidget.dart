@@ -65,13 +65,13 @@ class _ReplayWidget extends State<ReplayWidget> {
 
   Future<void> _onDeleteButtonPressed(
       String filePath, String fileName, BuildContext context) async {
-    Widget cancelButton = FlatButton(
+    Widget cancelButton = TextButton(
       child: Text("Cancel"),
       onPressed: () {
         Navigator.of(context).pop();
       },
     );
-    Widget continueButton = FlatButton(
+    Widget continueButton = TextButton(
       child: Text("Delete"),
       onPressed: () {
         deleteFile(filePath);
