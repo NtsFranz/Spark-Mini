@@ -4,13 +4,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'Keys.dart';
+import 'MatchJoiner.dart';
 import 'main.dart';
 
 class AtlasWidget extends StatefulWidget {
   final APIFrame frame;
+  final bool inGame;
   final Map<String, dynamic> ipLocation;
+  final String echoVRIP;
+  final String echoVRPort;
 
-  const AtlasWidget({Key key, this.frame, this.ipLocation}) : super(key: key);
+  const AtlasWidget({Key key, this.inGame, this.frame, this.ipLocation, this.echoVRIP, this.echoVRPort}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => AtlasState();
@@ -35,6 +39,7 @@ class AtlasState extends State<AtlasWidget> {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: <Widget>[
+          MatchJoiner(inGame: widget.inGame, echoVRIP: widget.echoVRIP, echoVRPort: widget.echoVRPort),
           (() {
             if (widget.frame.private_match != null &&
                 widget.frame.private_match) {
@@ -282,8 +287,8 @@ class AtlasState extends State<AtlasWidget> {
     setState(() {
       fetchingIgniteAtlas = true;
     });
-    final response = await http.get(Uri.https(
-        'api.ignitevr.gg', 'hosted_matches/$playerName'));
+    final response = await http
+        .get(Uri.https('api.ignitevr.gg', 'hosted_matches/$playerName'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
@@ -341,10 +346,8 @@ class AtlasState extends State<AtlasWidget> {
 
     print(json.encode(data));
 
-    final response = await http.post(
-        Uri.https('api.ignitevr.gg', 'host_match'),
-        headers: headers,
-        body: json.encode(data));
+    final response = await http.post(Uri.https('api.ignitevr.gg', 'host_match'),
+        headers: headers, body: json.encode(data));
 
     print(response.body);
     if (response.statusCode == 200) {

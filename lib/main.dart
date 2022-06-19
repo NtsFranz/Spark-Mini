@@ -264,8 +264,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     bool saveReplays = argsMap['saveReplays'];
     try {
       //log(echoVRIP);
-      final response =
-          await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
+      final response = await http
+          .get(Uri.http('$echoVRIP:$echoVRPort', 'session'))
+          .timeout(Duration(seconds: 2));
       if (response.statusCode == 200) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
@@ -466,8 +467,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   void fetchAPI() async {
     try {
-      final response =
-          await http.get(Uri.http('$echoVRIP:$echoVRPort', 'session'));
+      final response = await http
+          .get(Uri.http('$echoVRIP:$echoVRPort', 'session'))
+          .timeout(Duration(seconds: 2));
       if (response.statusCode == 200 || response.statusCode == 500) {
         // If the server did return a 200 OK response,
         // then parse the JSON.
@@ -635,8 +637,9 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     var bottomNavigationItems = <BottomNavigationBarItem>[
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
-      BottomNavigationBarItem(icon: const Icon(Icons.link), label: "Links"),
-      BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.share), label: "Share Match"),
+      // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.settings), label: "Settings"),
@@ -644,12 +647,15 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
     List<Widget> _tabViews = [
       DashboardWidget(inGame, lastFrame, lastIPLocationResponse,
-          orangeVRMLTeamInfo, blueVRMLTeamInfo, setEchoVRIP),
+          orangeVRMLTeamInfo, blueVRMLTeamInfo, setEchoVRIP, setEchoVRPort),
       AtlasWidget(
+        inGame: inGame,
         frame: lastFrame,
         ipLocation: lastIPLocationResponse,
+        echoVRIP: echoVRIP,
+        echoVRPort: echoVRPort,
       ),
-      ReplayWidget(replayFilePath),
+      // ReplayWidget(replayFilePath),
       // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
       SettingsWidget(
@@ -689,7 +695,7 @@ class Settings with ChangeNotifier {
   int atlasLinkStyle = 0;
   bool atlasLinkUseAngleBrackets = true;
   bool atlasLinkAppendTeamNames = false;
-  bool saveReplays = true;
+  bool saveReplays = false;
   String clientName = ''; // doesn't need to notify others usually
 
   Settings() {
@@ -851,19 +857,19 @@ class APIFrame {
           .toList();
     }
     var lastThrowMap = APILastThrow(
-        arm_speed: 0,
-        total_speed: 0,
-        off_axis_spin_deg: 0,
-        wrist_throw_penalty: 0,
-        rot_per_sec: 0,
-        pot_speed_from_rot: 0,
-        speed_from_arm: 0,
-        speed_from_movement: 0,
-        speed_from_wrist: 0,
-        wrist_align_to_throw_deg: 0,
-        throw_align_to_movement_deg: 0,
-        off_axis_penalty: 0,
-        throw_move_penalty: 0,
+      arm_speed: 0,
+      total_speed: 0,
+      off_axis_spin_deg: 0,
+      wrist_throw_penalty: 0,
+      rot_per_sec: 0,
+      pot_speed_from_rot: 0,
+      speed_from_arm: 0,
+      speed_from_movement: 0,
+      speed_from_wrist: 0,
+      wrist_align_to_throw_deg: 0,
+      throw_align_to_movement_deg: 0,
+      off_axis_penalty: 0,
+      throw_move_penalty: 0,
     );
     if (json['last_throw'] != null) {
       lastThrowMap = APILastThrow.fromJson(json['last_throw']);

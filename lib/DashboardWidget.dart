@@ -17,6 +17,7 @@ class DashboardWidget extends StatelessWidget {
   final Map<String, dynamic> orangeVRMLTeamInfo;
   final Map<String, dynamic> blueVRMLTeamInfo;
   final setEchoVRIP;
+  final setEchoVRPort;
 
   // String directory;
   // final List file;
@@ -25,8 +26,14 @@ class DashboardWidget extends StatelessWidget {
   // final bool atlasLinkShowTeamNames;
   // final SharedPreferences prefs;
   // final Settings settings;
-  DashboardWidget(this.inGame, this.frame, this.ipLocation,
-      this.orangeVRMLTeamInfo, this.blueVRMLTeamInfo, this.setEchoVRIP);
+  DashboardWidget(
+      this.inGame,
+      this.frame,
+      this.ipLocation,
+      this.orangeVRMLTeamInfo,
+      this.blueVRMLTeamInfo,
+      this.setEchoVRIP,
+      this.setEchoVRPort);
 
   Future<String> findQuestIP() async {
     final info = NetworkInfo();
@@ -52,6 +59,7 @@ class DashboardWidget extends StatelessWidget {
     // }
     print("Found EchoVR IP: $finalIP");
     setEchoVRIP(finalIP);
+    setEchoVRPort("6721");
     return finalIP;
   }
 
@@ -101,21 +109,45 @@ class DashboardWidget extends StatelessWidget {
                   ]),
                   color: Colors.red,
                 );
-              } else if (frame.sessionid == null) {
-                // in lobby
-                return Card(
-                  child:
-                      Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                    ListTile(
-                      title: Center(
-                          heightFactor: 2,
-                          child: Text(
-                            'In Lobby',
-                            textScaleFactor: 2,
-                          )),
-                    )
-                  ]),
-                );
+              } else {
+                return Container();
+              }
+            }()),
+            (() {
+              if (frame.sessionid == null) {
+                if (frame.err_code == -6) {
+                  // in lobby
+                  return Card(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          ListTile(
+                            title: Center(
+                                heightFactor: 2,
+                                child: Text(
+                                  'In Lobby',
+                                  textScaleFactor: 2,
+                                )),
+                          )
+                        ]),
+                  );
+                } else if (frame.err_code == -2) {
+                  // API not enabled
+                  return Card(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          ListTile(
+                            title: Center(
+                                heightFactor: 1.5,
+                                child: Text(
+                                  'API Access not enabled. Please enable it in the EchoVR settings menu.',
+                                  textScaleFactor: 1.5,
+                                )),
+                          )
+                        ]),
+                  );
+                }
               } else {
                 // in game
                 return Column(children: <Widget>[
@@ -186,9 +218,11 @@ class DashboardWidget extends StatelessWidget {
                           children: [
                             (() {
                               if (ipLocation != null &&
-                                  ipLocation['lat'] != null) {
+                                  ipLocation['ip-api'] != null &&
+                                  ipLocation['ip-api']['lat'] != null) {
                                 final LatLng latLon = LatLng(
-                                    ipLocation['lat'], ipLocation['lon']);
+                                    ipLocation['ip-api']['lat'],
+                                    ipLocation['ip-api']['lon']);
                                 return Container(
                                     height: 200,
                                     child: FlutterMap(
@@ -287,7 +321,7 @@ class DashboardWidget extends StatelessWidget {
                             title: Text('Last Throw'),
                             subtitle: Text(frame.last_throw.total_speed
                                     .toStringAsFixed(2) +
-                                ' m/s'),
+                                ' m/s\n'),
                             trailing: Column(
                               children: [
                                 Text('Arm: ' +
@@ -440,6 +474,12 @@ class DashboardWidget extends StatelessWidget {
                                         .toList());
                                 if (score == -1) {
                                   return "No player's ping can be over 150";
+                                } else if (score == -2) {
+                                  return "Not enough players";
+                                } else if (score == -3) {
+                                  return "Too many players";
+                                } else if (score == -4) {
+                                  return "Teams have different numbers of players";
                                 }
                                 return score.toStringAsFixed(2);
                               } else {
@@ -694,14 +734,14 @@ class DashboardWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
-                  "Not Connected.\n\nMake sure to set your Quest's local IP address in the Settings tab, and make sure API is enabled in EchoVR.",
+                  "Not Connected.\n\nMake sure your Quest is on the same WiFi network as this device and EchoVR is open and in a match/lobby, then click the button below.",
                   textScaleFactor: 1.3,
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 40),
                 ElevatedButton(
-                    onPressed: () {
-                      findQuestIP();
+                    onPressed: () async {
+                      await findQuestIP();
                     },
                     child:
                         Text("Find Quest IP", style: TextStyle(fontSize: 18)),
@@ -726,81 +766,92 @@ class DashboardWidget extends StatelessWidget {
   /// <summary>
   /// This method is based on the python code that is used in the VRML Discord bot for calculating server score.
   /// </summary>
-  /// <returns>The server score</returns>
+  /// <returns>
+  /// The server score
+  /// -1: Ping over 150
+  /// -2: Too few players
+  /// -3: Too many players
+  /// -4: Teams have different number of players
+  /// </returns>
   static double calculateServerScore(
       List<int> bluePings, List<int> orangePings) {
+    if (bluePings == null || orangePings == null) {
+      return -100;
+    }
+
     // configurable parameters for tuning
-    int minPing = 10; // you don't lose points for being higher than this value
-    int maxPing = 150; // won't compute if someone is over this number
-    int pingThreshold = 100; // you lose extra points for being higher than this
+    int ppt = bluePings.length; // players per team - can be set to 5 for NEPA
+    int min_ping = 10; // you don't lose points for being higher than this value
+    int max_ping = 150; // won't compute if someone is over this number
+    int ping_threshold =
+        100; // you lose extra points for being higher than this
 
     // points_distribution dictates how many points come from each area:
     //   0 - difference in sum of pings between teams
     //   1 - within-team variance
     //   2 - overall server variance
     //   3 - overall high/low pings for server
-    List<int> pointsDistribution = [30, 30, 30, 10];
+    final points_distribution = [30, 30, 30, 10];
+
+    // sanity check for ping values
+    if (bluePings.length < 4) {
+      return -2;
+    } else if (bluePings.length > 5) {
+      return -4;
+    }
+
+    if (bluePings.length != orangePings.length) {
+      return -4;
+    }
+
+    if (bluePings.reduce(max) > max_ping ||
+        orangePings.reduce(max) > max_ping) {
+      return -1;
+    }
 
     // determine max possible server/team variance and max possible sum diff,
     // given the min/max allowable ping
-    double maxServerVar = variance([
-      minPing,
-      minPing,
-      minPing,
-      minPing,
-      maxPing,
-      maxPing,
-      maxPing,
-      maxPing
-    ]);
-    double maxTeamVar = variance([minPing, minPing, maxPing, maxPing]);
-    int maxSumDiff = (4 * maxPing) - (4 * minPing);
-
-    // sanity check for ping values
-    if (bluePings == null ||
-        bluePings.length == 0 ||
-        orangePings == null ||
-        orangePings.length == 0) {
-      // Console.WriteLine("No player's ping can be over 150.");
-      return -1;
-    }
-    if (bluePings.reduce(max) > maxPing || orangePings.reduce(max) > maxPing) {
-      // Console.WriteLine("No player's ping can be over 150.");
-      return -1;
-    }
+    double max_server_var = variance(new List<int>.generate(
+        ppt * 2, (i) => i % 2 == 0 ? min_ping : max_ping));
+    var l1 = new List<int>.generate(
+        ((ppt as double) / 2.0).floor(), (i) => min_ping);
+    l1.addAll(new List<int>.generate(
+        ((ppt as double) / 2.0).ceil(), (i) => max_ping));
+    double max_team_var = variance(l1);
+    double max_sum_diff =
+        ((ppt as double) * max_ping) - ((ppt as double) * min_ping);
 
     // calculate points for sum diff
-    int blueSum = bluePings.reduce((a, b) => a + b);
-    int orangeSum = orangePings.reduce((a, b) => a + b);
-    int sumDiff = (blueSum - orangeSum).abs();
-
-    double sumPoints = (1 - (sumDiff / maxSumDiff)) * pointsDistribution[0];
+    double blueSum = bluePings.reduce((a, b) => a + b) as double;
+    double orangeSum = orangePings.reduce((a, b) => a + b) as double;
+    double sum_diff = (blueSum - orangeSum).abs();
+    double sum_points =
+        (1 - (sum_diff / max_sum_diff)) * points_distribution[0];
 
     // calculate points for team variances
     double blueVariance = variance(bluePings);
     double orangeVariance = variance(orangePings);
 
-    double meanVar = (blueVariance + orangeVariance) / 2;
-    double teamPoints = (1 - (meanVar / maxTeamVar)) * pointsDistribution[1];
+    double mean_var = (blueVariance + orangeVariance) / 2.0;
+    double team_points =
+        (1 - (mean_var / max_team_var)) * points_distribution[1];
 
-    // calculate points for server variance
     List<int> bothPings = new List.from(bluePings)..addAll(orangePings);
 
-    double serverVar = variance(bothPings);
-
-    double serverPoints =
-        (1 - (serverVar / maxServerVar)) * pointsDistribution[2];
+    // calculate points for server variance
+    double server_var = variance(bothPings);
+    double server_points =
+        (1 - (server_var / max_server_var)) * points_distribution[2];
 
     // calculate points for high/low ping across server
-    double hilo = ((blueSum + orangeSum) - (minPing * 8)) /
-        ((pingThreshold * 8) - (minPing * 8));
-
-    double hiloPoints = (1 - hilo) * pointsDistribution[3];
+    double hilo = ((blueSum + orangeSum) - (min_ping * ppt * 2)) /
+        ((ping_threshold * ppt * 2) - (min_ping * ppt * 2));
+    double hilo_points = (1 - hilo) * points_distribution[3];
 
     // add up points
-    double finalScore = sumPoints + teamPoints + serverPoints + hiloPoints;
+    double result = sum_points + team_points + server_points + hilo_points;
 
-    return finalScore;
+    return result;
   }
 
   static double variance(List<int> values) {
