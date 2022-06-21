@@ -38,8 +38,10 @@ class DashboardWidget extends StatelessWidget {
   Future<String> findQuestIP() async {
     final info = NetworkInfo();
 
-    var wifiIP = await info.getWifiIP(); // 192.168.1.43
-
+    var wifiIP = await info.getWifiIP(); // 192.168.1.147
+    if (wifiIP == null) {
+      wifiIP = "192.168.1.1";
+    }
     var baseIP = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
 
     var requests = <Future>[];
@@ -750,6 +752,12 @@ class DashboardWidget extends StatelessWidget {
                       onPrimary: Colors.white, // foreground
                       padding: EdgeInsets.all(20),
                     )),
+                SizedBox(height: 40),
+                Text(
+                  "Or enter your Quest IP manually on the settings page.",
+                  textScaleFactor: 1.3,
+                  textAlign: TextAlign.center,
+                ),
               ]),
         ),
       );
