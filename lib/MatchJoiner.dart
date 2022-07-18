@@ -64,7 +64,7 @@ class MatchJoinerState extends State<MatchJoiner> {
             .post(
                 Uri.http(
                     '${widget.echoVRIP}:${widget.echoVRPort}', 'join_session'),
-                body: json.encode({'session_id': matchedText}))
+                body: json.encode({'session_id': matchedText, 'team_idx': 0}))
             .timeout(Duration(seconds: 2));
         if (response.statusCode == 200) {}
       } catch (e) {}

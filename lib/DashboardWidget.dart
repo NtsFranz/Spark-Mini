@@ -40,7 +40,7 @@ class DashboardWidget extends StatelessWidget {
 
     var wifiIP = await info.getWifiIP(); // 192.168.1.147
     if (wifiIP == null) {
-      wifiIP = "192.168.1.1";
+      wifiIP = "192.168.0.1";
     }
     var baseIP = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
 

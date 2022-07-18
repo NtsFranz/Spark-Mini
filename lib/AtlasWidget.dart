@@ -115,8 +115,7 @@ class AtlasState extends State<AtlasWidget> {
 
             if (matches.length > 0) {
               return Column(
-                children: matches
-                    .map<Card>((match) => Card(
+                children: matches.map<Card>((match) => Card(
                           child:
                               Column(mainAxisSize: MainAxisSize.min, children: <
                                   Widget>[
@@ -150,7 +149,7 @@ class AtlasState extends State<AtlasWidget> {
                                                   new ClipboardData(
                                                       text: link));
                                               final snackBar = SnackBar(
-                                                  content: const Text("TEST"));
+                                                  content: Text(link));
                                               // Find the ScaffoldMessenger in the widget tree
                                               // and use it to show a SnackBar.
                                               ScaffoldMessenger.of(context)

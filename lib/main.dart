@@ -8,9 +8,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:spark_mini/MatchRulesPage.dart';
 import 'AtlasWidget.dart';
 import 'DashboardWidget.dart';
 import 'ReplayWidget.dart';
+import 'DebugPage.dart';
 import 'SettingsWidget.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
@@ -639,6 +641,10 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
       BottomNavigationBarItem(
           icon: const Icon(Icons.share), label: "Share Match"),
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.rule), label: "Match Rules"),
+      BottomNavigationBarItem(
+          icon: const Icon(Icons.bug_report), label: "Debug"),
       // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
       BottomNavigationBarItem(
@@ -655,6 +661,13 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         echoVRIP: echoVRIP,
         echoVRPort: echoVRPort,
       ),
+      MatchRulesPage(
+        inGame: inGame,
+        frame: lastFrame,
+        echoVRIP: echoVRIP,
+        echoVRPort: echoVRPort,
+      ),
+      DebugPage(),
       // ReplayWidget(replayFilePath),
       // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
@@ -825,6 +838,8 @@ class APIFrame {
   final int orange_points;
   final List<APITeam> teams;
   final APILastThrow last_throw;
+  final String rules_changed_by;
+  final int rules_changed_at;
   final Map<String, dynamic> raw;
 
   APIFrame({
@@ -840,8 +855,10 @@ class APIFrame {
     this.game_clock_display,
     this.blue_points,
     this.orange_points,
-    this.last_throw,
     this.teams,
+    this.last_throw,
+    this.rules_changed_by,
+    this.rules_changed_at,
     this.raw,
   });
 
@@ -889,6 +906,8 @@ class APIFrame {
       orange_points: json['orange_points'],
       teams: teamsMap,
       last_throw: lastThrowMap,
+      rules_changed_by: json['rules_changed_by'],
+      rules_changed_at: json['rules_changed_at'],
       raw: json,
     );
   }
