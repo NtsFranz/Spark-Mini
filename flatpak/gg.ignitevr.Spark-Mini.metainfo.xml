@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    Generator for metainfo & .desktop files: 
+    https://www.freedesktop.org/software/appstream/metainfocreator/#/
+-->
+<component type="desktop-application">
+  <id>gg.ignitevr.Spark-Mini</id>
+  <name>Spark Mini</name>
+  <summary>Echo VR companion app</summary>
+  <developer_name>NtsFranz</developer_name>
+  <url type="homepage">https://echopedia.gg/wiki/Spark_Mini</url>
+  <metadata_license>Commons Clause</metadata_license>
+  <project_license>Commons </project_license>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <description>
+    <p>Echo VR companion app</p>
+  </description>
+  <launchable type="desktop-id">gg.ignitevr.Spark-Mini.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://echopedia.gg/images/9/97/Spark_mini_main.jpg</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.0.0" date="2022-02-02" />
+  </releases>
+</component>

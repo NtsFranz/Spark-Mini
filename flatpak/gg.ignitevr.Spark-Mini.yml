@@ -1,0 +1,42 @@
+app-id: gg.ignitevr.Spark-Mini
+runtime: org.freedesktop.Platform
+runtime-version: '21.08'
+sdk: org.freedesktop.Sdk
+command: spark_mini
+separate-locales: false
+finish-args:
+- "--share=ipc"
+- "--socket=fallback-x11"
+- "--socket=wayland"
+- "--device=dri"
+- "--socket=pulseaudio"
+- "--share=network"
+modules:
+- name: spark_mini
+  buildsystem: simple
+  only-arches:
+  - x86_64
+  build-commands:
+  - mkdir -p Spark-Mini
+  - tar -xf Spark-Mini-Linux.tar.gz -C Spark-Mini
+  - cp -r Spark-Mini /app/
+  - chmod +x /app/Spark-Mini/spark_mini
+  - mkdir -p /app/bin
+  - ln -s /app/Spark-Mini/spark_mini /app/bin/spark_mini
+  - mkdir -p /app/share/metainfo
+  - cp -r gg.ignitevr.Spark-Mini.metainfo.xml /app/share/metainfo/
+  - mkdir -p /app/share/icons/hicolor/scalable/apps
+  - cp -r ignite_logo.svg /app/share/icons/hicolor/scalable/apps/gg.ignitevr.Spark-Mini.svg
+  - mkdir -p /app/share/applications
+  - cp -r gg.ignitevr.Spark-Mini.desktop /app/share/applications/
+  - mkdir -p /app/share/appdata
+  - cp -r gg.ignitevr.Spark-Mini.metainfo.xml /app/share/appdata/
+  sources:
+  - type: file
+    path: gg.ignitevr.Spark-Mini.metainfo.xml
+  - type: file
+    path: gg.ignitevr.Spark-Mini.desktop
+  - type: file
+    path: ../assets/icon/ignite_logo.svg
+  - type: file
+    path: ../Spark-Mini-Linux.tar.gz
