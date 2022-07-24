@@ -73,10 +73,11 @@ class MatchRulesPageState extends State<MatchRulesPage> {
                               minimumSize: Size.fromHeight(40),
                             ),
                             onPressed: () => {
-                                  setRules(p.value, widget.echoVRIP,
+                                  setRules(p.value["rules"], widget.echoVRIP,
                                       widget.echoVRPort)
                                 },
-                            child: Text(p.key, style: TextStyle(fontSize: 20)))))
+                            child:
+                                Text(p.key, style: TextStyle(fontSize: 20)))))
                     .toList(),
               );
             } else {
@@ -152,8 +153,7 @@ class MatchRulesPageState extends State<MatchRulesPage> {
         print(json.encode(val));
         await http.post(Uri.http('$echoVRIP:$echoVRPort', 'set_rules'),
             // body: '"${entry.key}":"${entry.value}"'
-          body: json.encode(val)
-        );
+            body: json.encode(val));
       }
     } else {
       // If the server did not return a 200 OK response,
