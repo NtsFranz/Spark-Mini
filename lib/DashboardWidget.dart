@@ -161,7 +161,9 @@ class _DashboardWidgetState extends State<DashboardWidget> {
       findingQuestIP = true;
     });
 
-    const int numBatches = 20;
+    // this is the length of the finding process, since ips within a batch are sequential
+    const int ipsPerBatch = 8;
+    int numBatches = (ips.length / ipsPerBatch).ceil();
     List<List<String>> batches = List<List<String>>.generate(numBatches, (_) => <String>[]);
     for (var i = 0; i < ips.length; i++) {
       print(i % numBatches);
@@ -172,6 +174,10 @@ class _DashboardWidgetState extends State<DashboardWidget> {
       futures.add(checkIPBatch(b, ips.length));
     }
     await Future.wait(futures);
+    setState(() {
+      findingQuestIP = false;
+      print("Failed to find EchoVR IP");
+    });
   }
 
   Future<String> checkIPBatch(List<String> ips, int totalIPs) async {

@@ -41,7 +41,9 @@ class MatchRulesPageState extends State<MatchRulesPage> {
             child: Center(
                 child: Text(
               (() {
-                if (widget.inGame && widget.frame.private_match) {
+                if (widget.inGame &&
+                    widget.frame.private_match != null &&
+                    widget.frame.private_match) {
                   return "Rules last changed by: ${widget.frame.rules_changed_by}";
                 } else {
                   return "Not in private match.";
