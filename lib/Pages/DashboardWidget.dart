@@ -6,7 +6,7 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'main.dart';
+import '../main.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
@@ -369,12 +369,12 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                         zoom: 3.5,
                                         // interactive: false
                                       ),
-                                      layers: [
-                                        TileLayerOptions(
+                                      children: [
+                                        TileLayer(
                                             urlTemplate:
                                                 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                                             subdomains: ['a', 'b', 'c']),
-                                        MarkerLayerOptions(
+                                        MarkerLayer(
                                           markers: [
                                             Marker(
                                               width: 10.0,

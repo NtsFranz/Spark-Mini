@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'main.dart';
+import '../main.dart';
 // import 'package:esys_flutter_share/esys_flutter_share.dart';
 
 class SettingsWidget extends StatefulWidget {

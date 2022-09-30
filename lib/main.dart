@@ -2,18 +2,15 @@ import 'dart:developer';
 import 'package:archive/archive_io.dart';
 import 'package:desktop_window/desktop_window.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
-import 'package:spark_mini/MatchRulesPage.dart';
-import 'AtlasWidget.dart';
-import 'DashboardWidget.dart';
-import 'ReplayWidget.dart';
-import 'DebugPage.dart';
-import 'SettingsWidget.dart';
+import 'package:spark_mini/Pages/MatchRulesPage.dart';
+import 'Model/APIFrame.dart';
+import 'Pages/AtlasWidget.dart';
+import 'Pages/DashboardWidget.dart';
+import 'Pages/DebugPage.dart';
+import 'Pages/SettingsWidget.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:io';
@@ -22,15 +19,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:isolate';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final sharedPreferences = await SharedPreferences.getInstance();
+
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     setMaxWindowSize();
   }
-  runApp(
-      ChangeNotifierProvider(create: (context) => Settings(), child: MyApp()));
+
+  runApp(ProviderScope(
+    overrides: [
+      // override the previous value with the new object
+      sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+    ],
+    child: MyApp(),
+  ));
 }
+
+final ipLocationResponse = StateProvider((ref) => Map<String, dynamic>());
+final orangeTeamVRMLInfo = StateProvider((ref) => Map<String, dynamic>());
+final blueTeamVRMLInfo = StateProvider((ref) => Map<String, dynamic>());
+final inGame = StateProvider((ref) => false);
+
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError();
+});
 
 Future setMaxWindowSize() async {
   await DesktopWindow.setWindowSize(Size(560, 870));
@@ -38,6 +53,30 @@ Future setMaxWindowSize() async {
   await DesktopWindow.setMinWindowSize(Size(350, 570));
   await DesktopWindow.setMaxWindowSize(Size(800, 1000));
 }
+
+class EchoVRAPIClient {
+  Stream<APIFrame> getFrameStream() async* {
+    APIFrame frame = APIFrame();
+
+    final timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+      fetchAPI();
+      setState(() {});
+    });
+    getEchoVRIP();
+    getEchoVRPort();
+  }
+}
+
+final echoVRAPIClientProvider = Provider<EchoVRAPIClient>(
+  (ref) {
+    return EchoVRAPIClient();
+  },
+);
+
+final frameProvider = StreamProvider<APIFrame>((ref) {
+  final wsClient = ref.watch(echoVRAPIClientProvider);
+  return wsClient.getFrameStream();
+});
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -90,17 +129,12 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   // bool atlasLinkAppendTeamNames = false;
   Timer timer;
 
-  bool inGame = false;
-  static APIFrame lastFrame = APIFrame();
   String replayFilename = 'newReplay.echoreplay';
   String replayFilePath = '';
   SendPort logIsolatePort;
   ReceivePort logIsolateReceivePort2 = ReceivePort();
   bool storageAuthorized = false;
 
-  Map<String, dynamic> lastIPLocationResponse = Map<String, dynamic>();
-  Map<String, dynamic> orangeVRMLTeamInfo = Map<String, dynamic>();
-  Map<String, dynamic> blueVRMLTeamInfo = Map<String, dynamic>();
   List fileList = new List();
 
   // SharedPreferences prefs;
@@ -140,7 +174,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     map['replayFilename'] = replayFilename;
     map['saveReplays'] = Settings().saveReplays;
 
-    initLogIsolate();
+    // initLogIsolate();
 
     //compute(computeFunction, map);
     /*var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
@@ -382,49 +416,49 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     }
   }
 
-  Future<void> getEchoVRIP() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    try {
-      String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
-      setState(() {
-        echoVRIP = newEchoVRIP;
-      });
-    } catch (Exception) {
-      setState(() {
-        echoVRIP = '127.0.0.1';
-      });
-    }
-  }
-
-  Future<void> getEchoVRPort() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    try {
-      String newEchoVRPort = prefs.getString('echoVRPort') ?? '6721';
-      setState(() {
-        echoVRPort = newEchoVRPort;
-      });
-    } catch (Exception) {
-      setState(() {
-        echoVRPort = '6721';
-      });
-    }
-  }
-
-  Future<void> setEchoVRIP(String value) async {
-    setState(() {
-      echoVRIP = value;
-    });
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('echoVRIP', value);
-  }
-
-  Future<void> setEchoVRPort(String value) async {
-    setState(() {
-      echoVRPort = value;
-    });
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('echoVRPort', value);
-  }
+  // Future<void> getEchoVRIP() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   try {
+  //     String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
+  //     setState(() {
+  //       echoVRIP = newEchoVRIP;
+  //     });
+  //   } catch (Exception) {
+  //     setState(() {
+  //       echoVRIP = '127.0.0.1';
+  //     });
+  //   }
+  // }
+  //
+  // Future<void> getEchoVRPort() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   try {
+  //     String newEchoVRPort = prefs.getString('echoVRPort') ?? '6721';
+  //     setState(() {
+  //       echoVRPort = newEchoVRPort;
+  //     });
+  //   } catch (Exception) {
+  //     setState(() {
+  //       echoVRPort = '6721';
+  //     });
+  //   }
+  // }
+  //
+  // Future<void> setEchoVRIP(String value) async {
+  //   setState(() {
+  //     echoVRIP = value;
+  //   });
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   prefs.setString('echoVRIP', value);
+  // }
+  //
+  // Future<void> setEchoVRPort(String value) async {
+  //   setState(() {
+  //     echoVRPort = value;
+  //   });
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   prefs.setString('echoVRPort', value);
+  // }
 
   @override
   void dispose() {
@@ -476,6 +510,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         // If the server did return a 200 OK response,
         // then parse the JSON.
         // setState(() {
+
         try {
           var newFrame = APIFrame.fromJson(jsonDecode(response.body));
 
@@ -554,7 +589,6 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       // If the server did not return a 200 OK response,
       // then throw an exception.
       // throw Exception('Failed to get game data');
-
     } catch (SocketException) {
       if (Settings().saveReplays) {
         if (!storageAuthorized) {
@@ -759,10 +793,10 @@ class Settings with ChangeNotifier {
           link = "<spark://c/$sessionid>";
           break;
         case 1:
-          link = "<atlas://j/$sessionid>";
+          link = "<spark://j/$sessionid>";
           break;
         case 2:
-          link = "<atlas://s/$sessionid>";
+          link = "<spark://s/$sessionid>";
           break;
       }
     } else {
@@ -771,10 +805,10 @@ class Settings with ChangeNotifier {
           link = "spark://c/$sessionid";
           break;
         case 1:
-          link = "atlas://j/$sessionid";
+          link = "spark://j/$sessionid";
           break;
         case 2:
-          link = "atlas://s/$sessionid";
+          link = "spark://s/$sessionid";
           break;
       }
     }
@@ -823,212 +857,3 @@ class Settings with ChangeNotifier {
   }
 }
 
-class APIFrame {
-  final int err_code;
-  final String err_description;
-  final String sessionid;
-  final String sessionip;
-  final String game_status;
-  final double game_clock;
-  final String match_type;
-  final bool private_match;
-  final String client_name;
-  final String game_clock_display;
-  final int blue_points;
-  final int orange_points;
-  final List<APITeam> teams;
-  final APILastThrow last_throw;
-  final String rules_changed_by;
-  final int rules_changed_at;
-  final Map<String, dynamic> raw;
-
-  APIFrame({
-    this.err_code,
-    this.err_description,
-    this.sessionid,
-    this.sessionip,
-    this.game_status,
-    this.game_clock,
-    this.match_type,
-    this.private_match,
-    this.client_name,
-    this.game_clock_display,
-    this.blue_points,
-    this.orange_points,
-    this.teams,
-    this.last_throw,
-    this.rules_changed_by,
-    this.rules_changed_at,
-    this.raw,
-  });
-
-  factory APIFrame.fromJson(Map<String, dynamic> json) {
-    var teamsMap = <APITeam>[
-      APITeam(team: "", players: <APIPlayer>[]),
-      APITeam(team: "", players: <APIPlayer>[]),
-      APITeam(team: "", players: <APIPlayer>[]),
-    ];
-    if (json['teams'] != null) {
-      teamsMap = json['teams']
-          .map<APITeam>((teamJSON) => APITeam.fromJson(teamJSON))
-          .toList();
-    }
-    var lastThrowMap = APILastThrow(
-      arm_speed: 0,
-      total_speed: 0,
-      off_axis_spin_deg: 0,
-      wrist_throw_penalty: 0,
-      rot_per_sec: 0,
-      pot_speed_from_rot: 0,
-      speed_from_arm: 0,
-      speed_from_movement: 0,
-      speed_from_wrist: 0,
-      wrist_align_to_throw_deg: 0,
-      throw_align_to_movement_deg: 0,
-      off_axis_penalty: 0,
-      throw_move_penalty: 0,
-    );
-    if (json['last_throw'] != null) {
-      lastThrowMap = APILastThrow.fromJson(json['last_throw']);
-    }
-    return APIFrame(
-      err_code: json['err_code'],
-      err_description: json['err_description'],
-      sessionid: json['sessionid'],
-      sessionip: json['sessionip'],
-      match_type: json['match_type'],
-      game_status: json['game_status'],
-      game_clock: json['game_clock'],
-      private_match: json['private_match'],
-      client_name: json['client_name'],
-      game_clock_display: json['game_clock_display'],
-      blue_points: json['blue_points'],
-      orange_points: json['orange_points'],
-      teams: teamsMap,
-      last_throw: lastThrowMap,
-      rules_changed_by: json['rules_changed_by'],
-      rules_changed_at: json['rules_changed_at'],
-      raw: json,
-    );
-  }
-}
-
-class APITeam {
-  final String team;
-  final List<APIPlayer> players;
-
-  APITeam({this.team, this.players});
-
-  factory APITeam.fromJson(Map<String, dynamic> json) {
-    return APITeam(
-      team: json['team'],
-      players: json.containsKey('players')
-          ? json['players']
-              .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
-              .toList()
-          : <APIPlayer>[],
-    );
-  }
-}
-
-class APIPlayer {
-  final String name;
-  final int ping;
-  final APIStats stats;
-
-  APIPlayer({this.name, this.ping, this.stats});
-
-  factory APIPlayer.fromJson(Map<String, dynamic> json) {
-    return APIPlayer(
-      name: json['name'],
-      ping: json['ping'],
-      stats: APIStats.fromJson(json['stats']),
-    );
-  }
-}
-
-class APIStats {
-  final double possession_time;
-  final int points;
-  final int saves;
-  final int goals;
-  final int stuns;
-  final int steals;
-  final int blocks;
-  final int assists;
-  final int shots_taken;
-
-  APIStats(
-      {this.possession_time,
-      this.points,
-      this.saves,
-      this.goals,
-      this.stuns,
-      this.steals,
-      this.blocks,
-      this.assists,
-      this.shots_taken});
-
-  factory APIStats.fromJson(Map<String, dynamic> json) {
-    return APIStats(
-      possession_time: json['possession_time'],
-      points: json['points'],
-      saves: json['saves'],
-      goals: json['goals'],
-      stuns: json['stuns'],
-      steals: json['steals'],
-      blocks: json['blocks'],
-      assists: json['assists'],
-      shots_taken: json['shots_taken'],
-    );
-  }
-}
-
-class APILastThrow {
-  final double arm_speed;
-  final double total_speed;
-  final double off_axis_spin_deg;
-  final double wrist_throw_penalty;
-  final double rot_per_sec;
-  final double pot_speed_from_rot;
-  final double speed_from_arm;
-  final double speed_from_movement;
-  final double speed_from_wrist;
-  final double wrist_align_to_throw_deg;
-  final double throw_align_to_movement_deg;
-  final double off_axis_penalty;
-  final double throw_move_penalty;
-
-  APILastThrow(
-      {this.arm_speed,
-      this.total_speed,
-      this.off_axis_spin_deg,
-      this.wrist_throw_penalty,
-      this.rot_per_sec,
-      this.pot_speed_from_rot,
-      this.speed_from_arm,
-      this.speed_from_movement,
-      this.speed_from_wrist,
-      this.wrist_align_to_throw_deg,
-      this.throw_align_to_movement_deg,
-      this.off_axis_penalty,
-      this.throw_move_penalty});
-
-  factory APILastThrow.fromJson(Map<String, dynamic> json) {
-    return APILastThrow(
-      arm_speed: json['arm_speed'],
-      total_speed: json['total_speed'],
-      off_axis_spin_deg: json['off_axis_spin_deg'],
-      wrist_throw_penalty: json['wrist_throw_penalty'],
-      rot_per_sec: json['rot_per_sec'],
-      pot_speed_from_rot: json['pot_speed_from_rot'],
-      speed_from_arm: json['speed_from_arm'],
-      speed_from_movement: json['speed_from_movement'],
-      speed_from_wrist: json['speed_from_wrist'],
-      wrist_align_to_throw_deg: json['wrist_align_to_throw_deg'],
-      throw_align_to_movement_deg: json['throw_align_to_movement_deg'],
-      off_axis_penalty: json['off_axis_penalty'],
-      throw_move_penalty: json['throw_move_penal'],
-    );
-  }
-}

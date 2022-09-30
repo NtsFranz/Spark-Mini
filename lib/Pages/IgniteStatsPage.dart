@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:spark_mini/Model/IgniteStatsPlayer.dart';
 
-import 'SizeConfig.dart';
+import '../SizeConfig.dart';
 
 class IgniteStatsPage extends StatelessWidget {
   final Map<String, dynamic> data;

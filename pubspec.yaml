@@ -31,7 +31,7 @@ dependencies:
   shared_preferences: ^2.0.4
   provider: ^6.0.2
   flutter_map: any
-  searchfield: ^0.6.6
+  searchfield: ^0.7.0
   json_annotation: ^4.4.0
   flutter_file_manager:
   permission_handler:
@@ -40,6 +40,7 @@ dependencies:
   share_plus: ^4.0.8
   intl:
   archive:
+  flutter_riverpod: ^2.0.0-dev.9
   # esys_flutter_share:
   #   git:
   #     url: git://github.com/jawad12345A/esys-flutter-share.git

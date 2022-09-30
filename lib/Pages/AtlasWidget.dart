@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'Keys.dart';
-import 'MatchJoiner.dart';
-import 'main.dart';
+import '../Keys.dart';
+import '../MatchJoiner.dart';
+import '../main.dart';
 
 class AtlasWidget extends StatefulWidget {
   final APIFrame frame;
