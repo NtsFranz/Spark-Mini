@@ -1,239 +1,49 @@
 import 'dart:io';
-import 'package:http/http.dart' as http;
+import 'dart:math';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
-import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../Model/APIFrame.dart';
+import 'package:http/http.dart' as http;
+import '../Services/server_score.dart';
 import '../main.dart';
-import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
-class DashboardWidget extends StatefulWidget {
-  final bool inGame;
-  final APIFrame frame;
-  final Map<String, dynamic> ipLocation;
-  final Map<String, dynamic> orangeVRMLTeamInfo;
-  final Map<String, dynamic> blueVRMLTeamInfo;
-  final setEchoVRIP;
-  final setEchoVRPort;
-
-  // String directory;
-  // final List file;
-  // final int atlasLinkStyle;
-  // final bool atlasLinkUseAngleBrackets;
-  // final bool atlasLinkShowTeamNames;
-  // final SharedPreferences prefs;
-  // final Settings settings;
-  DashboardWidget(
-      this.inGame,
-      this.frame,
-      this.ipLocation,
-      this.orangeVRMLTeamInfo,
-      this.blueVRMLTeamInfo,
-      this.setEchoVRIP,
-      this.setEchoVRPort);
+class DashboardWidget extends ConsumerStatefulWidget {
+  const DashboardWidget({Key key}) : super(key: key);
 
   @override
-  State<DashboardWidget> createState() => _DashboardWidgetState();
-
-  /// <summary>
-  /// This method is based on the python code that is used in the VRML Discord bot for calculating server score.
-  /// </summary>
-  /// <returns>
-  /// The server score
-  /// -1: Ping over 150
-  /// -2: Too few players
-  /// -3: Too many players
-  /// -4: Teams have different number of players
-  /// </returns>
-  static double calculateServerScore(
-      List<int> bluePings, List<int> orangePings) {
-    if (bluePings == null || orangePings == null) {
-      return -100;
-    }
-
-    // configurable parameters for tuning
-    int ppt = bluePings.length; // players per team - can be set to 5 for NEPA
-    int min_ping = 10; // you don't lose points for being higher than this value
-    int max_ping = 150; // won't compute if someone is over this number
-    int ping_threshold =
-        100; // you lose extra points for being higher than this
-
-    // points_distribution dictates how many points come from each area:
-    //   0 - difference in sum of pings between teams
-    //   1 - within-team variance
-    //   2 - overall server variance
-    //   3 - overall high/low pings for server
-    final points_distribution = [30, 30, 30, 10];
-
-    // sanity check for ping values
-    if (bluePings.length < 4) {
-      return -2;
-    } else if (bluePings.length > 5) {
-      return -4;
-    }
-
-    if (bluePings.length != orangePings.length) {
-      return -4;
-    }
-
-    if (bluePings.reduce(max) > max_ping ||
-        orangePings.reduce(max) > max_ping) {
-      return -1;
-    }
-
-    // determine max possible server/team variance and max possible sum diff,
-    // given the min/max allowable ping
-    double max_server_var = variance(new List<int>.generate(
-        ppt * 2, (i) => i % 2 == 0 ? min_ping : max_ping));
-    var l1 = new List<int>.generate(
-        ((ppt as double) / 2.0).floor(), (i) => min_ping);
-    l1.addAll(new List<int>.generate(
-        ((ppt as double) / 2.0).ceil(), (i) => max_ping));
-    double max_team_var = variance(l1);
-    double max_sum_diff =
-        ((ppt as double) * max_ping) - ((ppt as double) * min_ping);
-
-    // calculate points for sum diff
-    double blueSum = bluePings.reduce((a, b) => a + b) as double;
-    double orangeSum = orangePings.reduce((a, b) => a + b) as double;
-    double sum_diff = (blueSum - orangeSum).abs();
-    double sum_points =
-        (1 - (sum_diff / max_sum_diff)) * points_distribution[0];
-
-    // calculate points for team variances
-    double blueVariance = variance(bluePings);
-    double orangeVariance = variance(orangePings);
-
-    double mean_var = (blueVariance + orangeVariance) / 2.0;
-    double team_points =
-        (1 - (mean_var / max_team_var)) * points_distribution[1];
-
-    List<int> bothPings = new List.from(bluePings)..addAll(orangePings);
-
-    // calculate points for server variance
-    double server_var = variance(bothPings);
-    double server_points =
-        (1 - (server_var / max_server_var)) * points_distribution[2];
-
-    // calculate points for high/low ping across server
-    double hilo = ((blueSum + orangeSum) - (min_ping * ppt * 2)) /
-        ((ping_threshold * ppt * 2) - (min_ping * ppt * 2));
-    double hilo_points = (1 - hilo) * points_distribution[3];
-
-    // add up points
-    double result = sum_points + team_points + server_points + hilo_points;
-
-    return result;
-  }
-
-  static double variance(List<int> values) {
-    double avg = values.reduce((a, b) => a + b) / values.length;
-    return values.map((v) => (v - avg) * (v - avg)).reduce((a, b) => a + b);
-  }
+  ConsumerState<ConsumerStatefulWidget> createState() => DashboardWidgetState();
 }
 
-class _DashboardWidgetState extends State<DashboardWidget> {
-  double findingQuestIPProgress = 0;
+class DashboardWidgetState extends ConsumerState<DashboardWidget> {
   bool findingQuestIP = false;
-
-  Future findQuestIP() async {
-    final info = NetworkInfo();
-
-    var wifiIP = await info.getWifiIP(); // 192.168.1.147
-    if (wifiIP == null) {
-      wifiIP = "192.168.0.1";
-    }
-    var baseIP = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
-
-    var ips = <String>[];
-    for (var i = 0; i < 255; i++) {
-      final ip = i;
-      ips.add('$baseIP.$ip');
-    }
-    ips.add('127.0.0.1');
-
-    setState(() {
-      findingQuestIPProgress = 0;
-      findingQuestIP = true;
-    });
-
-    // this is the length of the finding process, since ips within a batch are sequential
-    const int ipsPerBatch = 8;
-    int numBatches = (ips.length / ipsPerBatch).ceil();
-    List<List<String>> batches = List<List<String>>.generate(numBatches, (_) => <String>[]);
-    for (var i = 0; i < ips.length; i++) {
-      print(i % numBatches);
-      batches[i % numBatches].add(ips[i]);
-    }
-    List<Future> futures = <Future>[];
-    for (var b in batches) {
-      futures.add(checkIPBatch(b, ips.length));
-    }
-    await Future.wait(futures);
-    setState(() {
-      findingQuestIP = false;
-      print("Failed to find EchoVR IP");
-    });
-  }
-
-  Future<String> checkIPBatch(List<String> ips, int totalIPs) async {
-    for (var i = 0; i < ips.length; i++) {
-      if (findingQuestIP) {
-        final ip = await checkIP(ips[i]);
-        setState(() {
-          findingQuestIPProgress += min(1.0 / totalIPs, 1);
-        });
-        print(findingQuestIPProgress);
-        if (ip != "") {
-          setState(() {
-            findingQuestIP = false;
-            print("Found EchoVR IP: $ip");
-            widget.setEchoVRIP(ip);
-            widget.setEchoVRPort("6721");
-          });
-          return ip;
-        }
-      }
-    }
-    return "";
-  }
-
-  // Returns the IP parameter quickly if correct, slowly if not
-  Future<String> checkIP(String ip) async {
-    try {
-      final response = await http
-          .get(Uri.http('$ip:6721', 'session'))
-          .timeout(Duration(seconds: 5), onTimeout: () {
-        return http.Response('Error', 408);
-      });
-      if (response.statusCode == 408) {
-        print("Timed out: $ip");
-        return "";
-      } else {
-        print(response.statusCode);
-
-        print("SUCCESS: $ip");
-        return ip;
-      }
-    } on SocketException catch (e) {
-      print("Socket Exception: $ip");
-      return "";
-    }
-  }
+  double findingQuestIPProgress = 0;
 
   @override
   Widget build(BuildContext context) {
-    if (widget.frame != null && widget.frame.err_code != null) {
+    final APIFrame frame = ref.watch(frameProvider);
+    final bool inGame = ref.watch(inGameProvider);
+    final settings = ref.watch(sharedPreferencesProvider);
+    final echoVRIP = ref.watch(echoVRIPProvider);
+    final echoVRPort = ref.watch(echoVRPortProvider);
+    final String sparkLink = ref.watch(sparkLinkProvider);
+    final orangeVRMLTeamInfo = ref.watch(orangeTeamVRMLInfoProvider);
+    final blueVRMLTeamInfo = ref.watch(blueTeamVRMLInfoProvider);
+    final Map<String, dynamic> ipLocation =
+        ref.watch(ipLocationResponseProvider);
+
+    if (frame != null && frame.err_code != null) {
       return Scaffold(
         body: ListView(
           padding: const EdgeInsets.all(8),
           children: <Widget>[
             (() {
-              if (!widget.inGame) {
+              if (!inGame) {
                 // not in game
                 return Card(
                   child:
@@ -252,8 +62,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
               }
             }()),
             (() {
-              if (widget.frame.sessionid == null) {
-                if (widget.frame.err_code == -6) {
+              if (frame.sessionid == null) {
+                if (frame.err_code == -6) {
                   // in lobby
                   return Card(
                     child: Column(
@@ -269,7 +79,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           )
                         ]),
                   );
-                } else if (widget.frame.err_code == -2) {
+                } else if (frame.err_code == -2) {
                   // API not enabled
                   return Card(
                     child: Column(
@@ -297,35 +107,23 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Consumer<Settings>(
-                          builder: (context, settings, child) => ListTile(
-                            title: Text(settings.getFormattedLink(
-                                widget.frame.sessionid,
-                                widget.orangeVRMLTeamInfo,
-                                widget.blueVRMLTeamInfo)),
-                            subtitle: Text('Click to copy to clipboard'),
-                            onTap: () {
-                              String link = settings.getFormattedLink(
-                                  widget.frame.sessionid,
-                                  widget.orangeVRMLTeamInfo,
-                                  widget.blueVRMLTeamInfo);
-                              Clipboard.setData(new ClipboardData(text: link));
+                        ListTile(
+                          title: Text(sparkLink),
+                          subtitle: Text('Click to copy to clipboard'),
+                          onTap: () {
+                            String link = sparkLink;
+                            Clipboard.setData(new ClipboardData(text: link));
 
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(
-                                content: Text(link),
-                              ));
-                            },
-                            onLongPress: () {
-                              if (!Platform.isWindows) {
-                                Share.share(settings.getFormattedLink(
-                                    widget.frame.sessionid,
-                                    widget.orangeVRMLTeamInfo,
-                                    widget.blueVRMLTeamInfo));
-                              }
-                            },
-                          ),
-                        )
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(link),
+                            ));
+                          },
+                          onLongPress: () {
+                            if (!Platform.isWindows) {
+                              Share.share(sparkLink);
+                            }
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -338,14 +136,14 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           title: ListTile(
                             title: Text('Server Location'),
                             subtitle: Text((() {
-                              if (widget.frame != null) {
-                                if (widget.ipLocation != null &&
-                                    widget.ipLocation['ip-api'] != null &&
-                                    widget.ipLocation['ip-api']['status'] ==
+                              if (frame != null) {
+                                if (ipLocation != null &&
+                                    ipLocation['ip-api'] != null &&
+                                    ipLocation['ip-api']['status'] ==
                                         'success') {
-                                  return '${widget.ipLocation['ip-api']['city']}, ${widget.ipLocation['ip-api']['region']}';
+                                  return '${ipLocation['ip-api']['city']}, ${ipLocation['ip-api']['region']}';
                                 } else {
-                                  return 'IP: ${widget.frame.sessionip}';
+                                  return 'IP: ${frame.sessionip}';
                                 }
                               } else {
                                 return '---';
@@ -355,12 +153,12 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           ),
                           children: [
                             (() {
-                              if (widget.ipLocation != null &&
-                                  widget.ipLocation['ip-api'] != null &&
-                                  widget.ipLocation['ip-api']['lat'] != null) {
+                              if (ipLocation != null &&
+                                  ipLocation['ip-api'] != null &&
+                                  ipLocation['ip-api']['lat'] != null) {
                                 final LatLng latLon = LatLng(
-                                    widget.ipLocation['ip-api']['lat'],
-                                    widget.ipLocation['ip-api']['lon']);
+                                    ipLocation['ip-api']['lat'],
+                                    ipLocation['ip-api']['lon']);
                                 return Container(
                                     height: 200,
                                     child: FlutterMap(
@@ -410,7 +208,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                             Container(
                               child: Card(
                                 child: Text(
-                                  '${widget.frame.orange_points}',
+                                  '${frame.orange_points}',
                                   textScaleFactor: 2,
                                   textAlign: TextAlign.center,
                                 ),
@@ -424,14 +222,14 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                             ),
                             Expanded(
                                 child: Text(
-                              '${widget.frame.game_clock_display}',
+                              '${frame.game_clock_display}',
                               textAlign: TextAlign.center,
                               textScaleFactor: 2,
                             )),
                             Container(
                               child: Card(
                                 child: Text(
-                                  '${widget.frame.blue_points}',
+                                  '${frame.blue_points}',
                                   textScaleFactor: 2,
                                   textAlign: TextAlign.center,
                                 ),
@@ -457,21 +255,21 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         ExpansionTile(
                           title: ListTile(
                             title: Text('Last Throw'),
-                            subtitle: Text(widget.frame.last_throw.total_speed
+                            subtitle: Text(frame.last_throw.total_speed
                                     .toStringAsFixed(2) +
                                 ' m/s\n'),
                             trailing: Column(
                               children: [
                                 Text('Arm: ' +
-                                    widget.frame.last_throw.speed_from_arm
+                                    frame.last_throw.speed_from_arm
                                         .toStringAsFixed(2) +
                                     ' m/s'),
                                 Text('Movement: ' +
-                                    widget.frame.last_throw.speed_from_movement
+                                    frame.last_throw.speed_from_movement
                                         .toStringAsFixed(2) +
                                     ' m/s'),
                                 Text('Wrist: ' +
-                                    widget.frame.last_throw.speed_from_wrist
+                                    frame.last_throw.speed_from_wrist
                                         .toStringAsFixed(2) +
                                     ' m/s'),
                               ],
@@ -488,29 +286,28 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Total Speed')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw.total_speed
+                                      frame.last_throw.total_speed
                                           .toStringAsFixed(2) +
                                       ' m/s'))
                                 ]),
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Arm Speed')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw.speed_from_arm
+                                      frame.last_throw.speed_from_arm
                                           .toStringAsFixed(2) +
                                       ' m/s'))
                                 ]),
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Wrist Speed')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw.speed_from_wrist
+                                      frame.last_throw.speed_from_wrist
                                           .toStringAsFixed(2) +
                                       ' m/s'))
                                 ]),
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Movement Speed')),
                                   DataCell(Text('' +
-                                      widget
-                                          .frame.last_throw.speed_from_movement
+                                      frame.last_throw.speed_from_movement
                                           .toStringAsFixed(2) +
                                       ' m/s'))
                                 ]),
@@ -529,21 +326,21 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Arm Speed')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw.arm_speed
+                                      frame.last_throw.arm_speed
                                           .toStringAsFixed(2) +
                                       ' m/s'))
                                 ]),
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Rots/second')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw.rot_per_sec
+                                      frame.last_throw.rot_per_sec
                                           .toStringAsFixed(2) +
                                       ' r/s'))
                                 ]),
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Pot spd from rot')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw.pot_speed_from_rot
+                                      frame.last_throw.pot_speed_from_rot
                                           .toStringAsFixed(2) +
                                       ' m/s'))
                                 ]),
@@ -562,22 +359,21 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Off Axis Spin')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw.off_axis_spin_deg
+                                      frame.last_throw.off_axis_spin_deg
                                           .toStringAsFixed(1) +
                                       ' deg'))
                                 ]),
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Wrist align')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw
-                                          .wrist_align_to_throw_deg
+                                      frame.last_throw.wrist_align_to_throw_deg
                                           .toStringAsFixed(1) +
                                       ' deg'))
                                 ]),
                                 DataRow(cells: <DataCell>[
                                   DataCell(Text('Movement align')),
                                   DataCell(Text('' +
-                                      widget.frame.last_throw
+                                      frame.last_throw
                                           .throw_align_to_movement_deg
                                           .toStringAsFixed(1) +
                                       ' deg'))
@@ -603,16 +399,15 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           title: ListTile(
                             title: Text('Server Score'),
                             subtitle: Text((() {
-                              if (widget.frame.teams[0].players != null &&
-                                  widget.frame.teams[1].players != null) {
-                                double score =
-                                    DashboardWidget.calculateServerScore(
-                                        widget.frame.teams[0].players
-                                            .map<int>((p) => p.ping)
-                                            .toList(),
-                                        widget.frame.teams[1].players
-                                            .map<int>((p) => p.ping)
-                                            .toList());
+                              if (frame.teams[0].players != null &&
+                                  frame.teams[1].players != null) {
+                                num score = calculateServerScore(
+                                    frame.teams[0].players
+                                        .map<int>((p) => p.ping)
+                                        .toList(),
+                                    frame.teams[1].players
+                                        .map<int>((p) => p.ping)
+                                        .toList());
                                 if (score == -1) {
                                   return "No player's ping can be over 150";
                                 } else if (score == -2) {
@@ -637,7 +432,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                     DataColumn(label: Text('Player Name')),
                                     DataColumn(label: Text('Ping'))
                                   ],
-                                  rows: widget.frame.teams[0].players
+                                  rows: frame.teams[0].players
                                       .map<DataRow>((p) =>
                                           DataRow(cells: <DataCell>[
                                             DataCell(Text(p.name)),
@@ -657,7 +452,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                     DataColumn(label: Text('Ping')),
                                     DataColumn(label: Text('Player Name')),
                                   ],
-                                  rows: widget.frame.teams[1].players
+                                  rows: frame.teams[1].players
                                       .map<DataRow>((p) =>
                                           DataRow(cells: <DataCell>[
                                             DataCell(Text(p.ping.toString())),
@@ -689,12 +484,11 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         ExpansionTile(
                           title: ListTile(
                             leading: (() {
-                              if (widget.orangeVRMLTeamInfo
-                                      .containsKey('count') &&
-                                  widget.orangeVRMLTeamInfo['count'] > 1) {
+                              if (orangeVRMLTeamInfo.containsKey('count') &&
+                                  orangeVRMLTeamInfo['count'] > 1) {
                                 return Container(
                                     child: Image.network(
-                                  widget.orangeVRMLTeamInfo['team_logo'],
+                                  orangeVRMLTeamInfo['team_logo'],
                                 ));
                               } else {
                                 return Icon(
@@ -718,8 +512,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                               style: TextStyle(color: Colors.orange),
                             ),
                             subtitle: Text(() {
-                              if (widget.frame.teams[1].players != null) {
-                                return '${widget.frame.teams[1].players.map((p) => p.name).join('\n')}';
+                              if (frame.teams[1].players != null) {
+                                return '${frame.teams[1].players.map((p) => p.name).join('\n')}';
                               } else {
                                 return '';
                               }
@@ -735,7 +529,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 DataColumn(label: Text('Steals')),
                                 DataColumn(label: Text('Stuns')),
                               ],
-                              rows: widget.frame.teams[1].players
+                              rows: frame.teams[1].players
                                   .map<DataRow>((p) =>
                                       DataRow(cells: <DataCell>[
                                         DataCell(Text(p.name)),
@@ -769,12 +563,11 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         ExpansionTile(
                           title: ListTile(
                             leading: (() {
-                              if (widget.blueVRMLTeamInfo
-                                      .containsKey('count') &&
-                                  widget.blueVRMLTeamInfo['count'] > 1) {
+                              if (blueVRMLTeamInfo.containsKey('count') &&
+                                  blueVRMLTeamInfo['count'] > 1) {
                                 return Container(
                                     child: Image.network(
-                                  widget.blueVRMLTeamInfo['team_logo'],
+                                  blueVRMLTeamInfo['team_logo'],
                                 ));
                               } else {
                                 return Icon(
@@ -788,8 +581,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                               style: TextStyle(color: Colors.blue),
                             ),
                             subtitle: Text(() {
-                              if (widget.frame.teams[0].players != null) {
-                                return '${widget.frame.teams[0].players.map((p) => p.name).join('\n')}';
+                              if (frame.teams[0].players != null) {
+                                return '${frame.teams[0].players.map((p) => p.name).join('\n')}';
                               } else {
                                 return '';
                               }
@@ -805,7 +598,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 DataColumn(label: Text('Steals')),
                                 DataColumn(label: Text('Stuns')),
                               ],
-                              rows: widget.frame.teams[0].players
+                              rows: frame.teams[0].players
                                   .map<DataRow>((p) =>
                                       DataRow(cells: <DataCell>[
                                         DataCell(Text(p.name)),
@@ -841,8 +634,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           // tileColor: Colors.grey.withOpacity(.2),
                           title: Text('Spectators'),
                           subtitle: Text(() {
-                            if (widget.frame.teams[2].players != null) {
-                              return '${widget.frame.teams[2].players.map((p) => p.name).join('\n')}';
+                            if (frame.teams[2].players != null) {
+                              return '${frame.teams[2].players.map((p) => p.name).join('\n')}';
                             } else {
                               return '';
                             }
@@ -926,5 +719,92 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     // setState(() {
     //   file = Directory("$directory/resume/").listSync();  //use your folder name insted of resume.
     // });
+  }
+
+  Future findQuestIP() async {
+    final info = NetworkInfo();
+
+    var wifiIP = await info.getWifiIP(); // 192.168.1.147
+    if (wifiIP == null) {
+      wifiIP = "192.168.0.1";
+    }
+    var baseIP = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
+
+    var ips = <String>[];
+    for (var i = 0; i < 255; i++) {
+      final ip = i;
+      ips.add('$baseIP.$ip');
+    }
+    ips.add('127.0.0.1');
+
+    setState(() {
+      findingQuestIPProgress = 0;
+      findingQuestIP = true;
+    });
+
+    // this is the length of the finding process, since ips within a batch are sequential
+    const int ipsPerBatch = 8;
+    int numBatches = (ips.length / ipsPerBatch).ceil();
+    List<List<String>> batches =
+        List<List<String>>.generate(numBatches, (_) => <String>[]);
+    for (var i = 0; i < ips.length; i++) {
+      print(i % numBatches);
+      batches[i % numBatches].add(ips[i]);
+    }
+    List<Future> futures = <Future>[];
+    for (var b in batches) {
+      futures.add(checkIPBatch(b, ips.length));
+    }
+    await Future.wait(futures);
+    setState(() {
+      findingQuestIP = false;
+      print("Failed to find EchoVR IP");
+    });
+  }
+
+  Future<String> checkIPBatch(List<String> ips, int totalIPs) async {
+    for (var i = 0; i < ips.length; i++) {
+      if (findingQuestIP) {
+        final ip = await checkIP(ips[i]);
+        setState(() {
+          findingQuestIPProgress += min(1.0 / totalIPs, 1);
+        });
+        print(findingQuestIPProgress);
+        if (ip != "") {
+          setState(() {
+            findingQuestIP = false;
+            print("Found EchoVR IP: $ip");
+            // TODO set prefs
+            // widget.setEchoVRIP(ip);
+            // widget.setEchoVRPort("6721");
+          });
+          return ip;
+        }
+      }
+    }
+    return "";
+  }
+
+// Returns the IP parameter quickly if correct, slowly if not
+  Future<String> checkIP(String ip) async {
+    try {
+      final response = await http
+          .get(Uri.http('$ip:6721', 'session'))
+          .timeout(Duration(seconds: 5), onTimeout: () {
+        return http.Response('Error', 408);
+      });
+      if (response.statusCode == 408) {
+        print("Timed out: $ip");
+        return "";
+      } else {
+        print(response.statusCode);
+
+        print("SUCCESS: $ip");
+        return ip;
+      }
+    } on SocketException catch (e) {
+      print("Socket Exception: $ip");
+      return "";
+    }
   }
 }

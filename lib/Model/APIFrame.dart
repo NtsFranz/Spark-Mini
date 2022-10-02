@@ -99,8 +99,8 @@ class APITeam {
       team: json['team'],
       players: json.containsKey('players')
           ? json['players']
-          .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
-          .toList()
+              .map<APIPlayer>((playerJSON) => APIPlayer.fromJson(playerJSON))
+              .toList()
           : <APIPlayer>[],
     );
   }
@@ -135,14 +135,14 @@ class APIStats {
 
   APIStats(
       {this.possession_time,
-        this.points,
-        this.saves,
-        this.goals,
-        this.stuns,
-        this.steals,
-        this.blocks,
-        this.assists,
-        this.shots_taken});
+      this.points,
+      this.saves,
+      this.goals,
+      this.stuns,
+      this.steals,
+      this.blocks,
+      this.assists,
+      this.shots_taken});
 
   factory APIStats.fromJson(Map<String, dynamic> json) {
     return APIStats(
@@ -176,18 +176,18 @@ class APILastThrow {
 
   APILastThrow(
       {this.arm_speed,
-        this.total_speed,
-        this.off_axis_spin_deg,
-        this.wrist_throw_penalty,
-        this.rot_per_sec,
-        this.pot_speed_from_rot,
-        this.speed_from_arm,
-        this.speed_from_movement,
-        this.speed_from_wrist,
-        this.wrist_align_to_throw_deg,
-        this.throw_align_to_movement_deg,
-        this.off_axis_penalty,
-        this.throw_move_penalty});
+      this.total_speed,
+      this.off_axis_spin_deg,
+      this.wrist_throw_penalty,
+      this.rot_per_sec,
+      this.pot_speed_from_rot,
+      this.speed_from_arm,
+      this.speed_from_movement,
+      this.speed_from_wrist,
+      this.wrist_align_to_throw_deg,
+      this.throw_align_to_movement_deg,
+      this.off_axis_penalty,
+      this.throw_move_penalty});
 
   factory APILastThrow.fromJson(Map<String, dynamic> json) {
     return APILastThrow(

@@ -1,27 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
-import '../Keys.dart';
-import '../MatchJoiner.dart';
+import '../Model/APIFrame.dart';
 import '../main.dart';
 
-class MatchRulesPage extends StatefulWidget {
-  final APIFrame frame;
-  final bool inGame;
-  final String echoVRIP;
-  final String echoVRPort;
-
-  const MatchRulesPage(
-      {Key key, this.inGame, this.frame, this.echoVRIP, this.echoVRPort})
-      : super(key: key);
+class MatchRulesPage extends ConsumerStatefulWidget {
+  const MatchRulesPage({Key key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => MatchRulesPageState();
+  ConsumerState<ConsumerStatefulWidget> createState() => MatchRulesPageState();
 }
 
-class MatchRulesPageState extends State<MatchRulesPage> {
+class MatchRulesPageState extends ConsumerState<MatchRulesPage> {
   Map<String, dynamic> matchRulesPresets;
   bool fetchingPresets = false;
 
@@ -33,6 +24,11 @@ class MatchRulesPageState extends State<MatchRulesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final APIFrame frame = ref.watch(frameProvider);
+    final bool inGame = ref.watch(inGameProvider);
+    final echoVRIP = ref.watch(echoVRIPProvider);
+    final echoVRPort = ref.watch(echoVRPortProvider);
+
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(12),
@@ -41,10 +37,10 @@ class MatchRulesPageState extends State<MatchRulesPage> {
             child: Center(
                 child: Text(
               (() {
-                if (widget.inGame &&
-                    widget.frame.private_match != null &&
-                    widget.frame.private_match) {
-                  return "Rules last changed by: ${widget.frame.rules_changed_by}";
+                if (inGame &&
+                    frame.private_match != null &&
+                    frame.private_match) {
+                  return "Rules last changed by: ${frame.rules_changed_by}";
                 } else {
                   return "Not in private match.";
                 }
@@ -75,8 +71,8 @@ class MatchRulesPageState extends State<MatchRulesPage> {
                               minimumSize: Size.fromHeight(40),
                             ),
                             onPressed: () => {
-                                  setRules(p.value["rules"], widget.echoVRIP,
-                                      widget.echoVRPort)
+                                  setRules(
+                                      p.value["rules"], echoVRIP, echoVRPort)
                                 },
                             child:
                                 Text(p.key, style: TextStyle(fontSize: 20)))))
@@ -96,15 +92,13 @@ class MatchRulesPageState extends State<MatchRulesPage> {
           }()),
         ],
       ),
-      floatingActionButton: Consumer<Settings>(
-        builder: (context, settings, child) => FloatingActionButton(
-          onPressed: () {
-            fetchMatchRulesPresets();
-          },
-          child: const Icon(Icons.refresh),
-          tooltip: "Fetch Presets",
-          backgroundColor: Colors.red,
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          fetchMatchRulesPresets();
+        },
+        child: const Icon(Icons.refresh),
+        tooltip: "Fetch Presets",
+        backgroundColor: Colors.red,
       ),
     );
   }

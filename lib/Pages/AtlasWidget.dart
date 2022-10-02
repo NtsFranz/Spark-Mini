@@ -1,54 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../Keys.dart';
 import '../MatchJoiner.dart';
+import '../Model/APIFrame.dart';
+import '../Services/spark_links.dart';
 import '../main.dart';
 
-class AtlasWidget extends StatefulWidget {
-  final APIFrame frame;
-  final bool inGame;
-  final Map<String, dynamic> ipLocation;
-  final String echoVRIP;
-  final String echoVRPort;
-
-  const AtlasWidget({Key key, this.inGame, this.frame, this.ipLocation, this.echoVRIP, this.echoVRPort}) : super(key: key);
+class AtlasWidget extends ConsumerStatefulWidget {
+  const AtlasWidget({Key key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => AtlasState();
+  ConsumerState<ConsumerStatefulWidget> createState() => AtlasState();
 }
 
-class AtlasState extends State<AtlasWidget> {
-  final List<String> linkTypes = <String>['Choose', 'Player', 'Spectator'];
-  Map<String, dynamic> ogAtlasMatches;
-  Map<String, dynamic> igniteAtlasMatches;
-  bool fetchingIgniteAtlas = false;
-  bool fetchingOGAtlas = false;
+class AtlasState extends ConsumerState<AtlasWidget> {
+  Map<String, dynamic> hostedMatches;
+  bool fetching = false;
 
   @override
   void initState() {
     super.initState();
-    fetchIgniteAtlasMatches(widget.frame.client_name);
+
+    final APIFrame initFrame = ref.read(frameProvider);
+    fetchMatches(initFrame.client_name);
   }
 
   @override
   Widget build(BuildContext context) {
+    final APIFrame frame = ref.watch(frameProvider);
+    final bool inGame = ref.watch(inGameProvider);
+    final echoVRIP = ref.watch(echoVRIPProvider);
+    final echoVRPort = ref.watch(echoVRPortProvider);
+    final Map<String, dynamic> ipLocation =
+        ref.watch(ipLocationResponseProvider);
+
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: <Widget>[
-          MatchJoiner(inGame: widget.inGame, echoVRIP: widget.echoVRIP, echoVRPort: widget.echoVRPort),
+          MatchJoiner(
+              inGame: inGame, echoVRIP: echoVRIP, echoVRPort: echoVRPort),
           (() {
-            if (widget.frame.private_match != null &&
-                widget.frame.private_match) {
+            if (frame.private_match != null && frame.private_match) {
               return Container(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                       primary: Colors.red, padding: EdgeInsets.all(24)),
                   onPressed: (() {
-                    hostMatch(widget.frame, widget.ipLocation);
+                    hostMatch(frame, ipLocation);
                   }),
                   child: Text('Post Match'),
                 ),
@@ -68,24 +71,19 @@ class AtlasState extends State<AtlasWidget> {
           }()),
           (() {
             var matches = <dynamic>[];
-            if (igniteAtlasMatches != null &&
-                igniteAtlasMatches.containsKey('matches')) {
-              matches = matches + igniteAtlasMatches['matches'];
-            }
-            if (ogAtlasMatches != null &&
-                ogAtlasMatches.containsKey('matches')) {
-              matches = matches + ogAtlasMatches['matches'];
+            if (hostedMatches != null && hostedMatches.containsKey('matches')) {
+              matches = matches + hostedMatches['matches'];
             }
 
-            if (widget.frame.private_match != null &&
-                widget.frame.private_match &&
+            if (frame.private_match != null &&
+                frame.private_match &&
                 matches.length > 0) {
               return Container(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                       primary: Colors.red, padding: EdgeInsets.all(14)),
                   onPressed: (() {
-                    unhostMatch(widget.frame);
+                    unhostMatch(frame);
                   }),
                   child: Text('Remove Posted Match'),
                 ),
@@ -96,7 +94,7 @@ class AtlasState extends State<AtlasWidget> {
             }
           }()),
           (() {
-            if (fetchingIgniteAtlas || fetchingOGAtlas) {
+            if (fetching) {
               return Center(child: const CircularProgressIndicator());
             } else {
               return Container();
@@ -104,18 +102,14 @@ class AtlasState extends State<AtlasWidget> {
           }()),
           (() {
             var matches = <dynamic>[];
-            if (igniteAtlasMatches != null &&
-                igniteAtlasMatches.containsKey('matches')) {
-              matches = matches + igniteAtlasMatches['matches'];
-            }
-            if (ogAtlasMatches != null &&
-                ogAtlasMatches.containsKey('matches')) {
-              matches = matches + ogAtlasMatches['matches'];
+            if (hostedMatches != null && hostedMatches.containsKey('matches')) {
+              matches = matches + hostedMatches['matches'];
             }
 
             if (matches.length > 0) {
               return Column(
-                children: matches.map<Card>((match) => Card(
+                children: matches
+                    .map<Card>((match) => Card(
                           child:
                               Column(mainAxisSize: MainAxisSize.min, children: <
                                   Widget>[
@@ -135,42 +129,38 @@ class AtlasState extends State<AtlasWidget> {
                                       return Text('From Atlas app');
                                     }
                                   }()),
-                                  Consumer<Settings>(
-                                      builder: (context, settings, child) =>
-                                          ElevatedButton(
-                                            onPressed: () {
-                                              String link =
-                                                  settings.getFormattedLink(
-                                                      match['matchid'],
-                                                      match['blue_team_info'],
-                                                      match[
-                                                          'orange_team_info']);
-                                              Clipboard.setData(
-                                                  new ClipboardData(
-                                                      text: link));
-                                              final snackBar = SnackBar(
-                                                  content: Text(link));
-                                              // Find the ScaffoldMessenger in the widget tree
-                                              // and use it to show a SnackBar.
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(snackBar);
-                                            },
-                                            child: Row(children: [
-                                              Text("Copy Join Link"),
-                                              Container(
-                                                  margin: EdgeInsets.all(4),
-                                                  child: Icon(
-                                                    Icons.copy,
-                                                    size: 16,
-                                                  ))
-                                            ]),
-                                            style: ElevatedButton.styleFrom(
-                                              primary:
-                                                  Colors.black12, // background
-                                              onPrimary:
-                                                  Colors.white, // foreground
-                                            ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      String link = getFormattedLink(
+                                          match['matchid'],
+                                          true,
+                                          0,
+                                          true,
+                                          match['blue_team_info'],
+                                          match['orange_team_info']);
+                                      Clipboard.setData(
+                                          new ClipboardData(text: link));
+                                      final snackBar =
+                                          SnackBar(content: Text(link));
+                                      // Find the ScaffoldMessenger in the widget tree
+                                      // and use it to show a SnackBar.
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(snackBar);
+                                    },
+                                    child: Row(children: [
+                                      Text("Copy Join Link"),
+                                      Container(
+                                          margin: EdgeInsets.all(4),
+                                          child: Icon(
+                                            Icons.copy,
+                                            size: 16,
                                           ))
+                                    ]),
+                                    style: ElevatedButton.styleFrom(
+                                      primary: Colors.black12, // background
+                                      onPrimary: Colors.white, // foreground
+                                    ),
+                                  )
                                 ],
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceAround,
@@ -269,22 +259,20 @@ class AtlasState extends State<AtlasWidget> {
           }()),
         ],
       ),
-      floatingActionButton: Consumer<Settings>(
-        builder: (context, settings, child) => FloatingActionButton(
-          onPressed: () {
-            fetchIgniteAtlasMatches(widget.frame.client_name);
-          },
-          child: const Icon(Icons.refresh),
-          tooltip: "Refresh Matches",
-          backgroundColor: Colors.red,
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          fetchMatches(frame.client_name);
+        },
+        child: const Icon(Icons.refresh),
+        tooltip: "Refresh Matches",
+        backgroundColor: Colors.red,
       ),
     );
   }
 
-  void fetchIgniteAtlasMatches(String playerName) async {
+  void fetchMatches(String playerName) async {
     setState(() {
-      fetchingIgniteAtlas = true;
+      fetching = true;
     });
     final response = await http
         .get(Uri.https('api.ignitevr.gg', 'hosted_matches/$playerName'));
@@ -294,8 +282,8 @@ class AtlasState extends State<AtlasWidget> {
       // then parse the JSON.
       if (!mounted) return;
       setState(() {
-        igniteAtlasMatches = jsonDecode(response.body);
-        fetchingIgniteAtlas = false;
+        hostedMatches = jsonDecode(response.body);
+        fetching = false;
       });
     } else {
       // If the server did not return a 200 OK response,
@@ -352,7 +340,7 @@ class AtlasState extends State<AtlasWidget> {
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
-      fetchIgniteAtlasMatches(frame.client_name);
+      fetchMatches(frame.client_name);
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
@@ -405,7 +393,7 @@ class AtlasState extends State<AtlasWidget> {
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
-      fetchIgniteAtlasMatches(frame.client_name);
+      fetchMatches(frame.client_name);
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.

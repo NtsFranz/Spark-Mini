@@ -21,6 +21,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:isolate';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'Services/FrameFetcher.dart';
+import 'Services/spark_links.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -38,14 +41,108 @@ Future<void> main() async {
   ));
 }
 
-final ipLocationResponse = StateProvider((ref) => Map<String, dynamic>());
-final orangeTeamVRMLInfo = StateProvider((ref) => Map<String, dynamic>());
-final blueTeamVRMLInfo = StateProvider((ref) => Map<String, dynamic>());
-final inGame = StateProvider((ref) => false);
+final ipLocationResponseProvider =
+    StateProvider((ref) => Map<String, dynamic>());
+final orangeTeamVRMLInfoProvider =
+    StateProvider((ref) => Map<String, dynamic>());
+final blueTeamVRMLInfoProvider = StateProvider((ref) => Map<String, dynamic>());
+final inGameProvider = StateProvider((ref) {
+  final APIFrame frame = ref.watch(frameProvider);
+  return frame != null;
+});
+final sparkLinkProvider = StateProvider<String>((ref) {
+  final APIFrame frame = ref.watch(frameProvider);
+  final SharedPreferences prefs = ref.watch(sharedPreferencesProvider);
+  final orange = ref.watch(orangeTeamVRMLInfoProvider);
+  final blue = ref.watch(blueTeamVRMLInfoProvider);
+  if (frame != null) {
+    return getFormattedLink(
+        frame.sessionid,
+        prefs.getBool('linkAngleBrackets') ?? true,
+        prefs.getInt('linkType') ?? 0,
+        prefs.getBool('linkAppendTeamNames') ?? false,
+        orange,
+        blue);
+  } else {
+    return "";
+  }
+});
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
 });
+
+final echoVRIPProvider = StateProvider<String>((ref) {
+  final SharedPreferences prefs = ref.watch(sharedPreferencesProvider);
+  final ip = prefs.getString('echoVRIP');
+  if (ip == null) {
+    return '127.0.0.1';
+  } else {
+    return ip;
+  }
+});
+final echoVRPortProvider = StateProvider<String>((ref) {
+  final SharedPreferences prefs = ref.watch(sharedPreferencesProvider);
+  final ip = prefs.getString('echoVRPort');
+  if (ip == null) {
+    return '6721';
+  } else {
+    return ip;
+  }
+});
+
+final frameProvider = StateNotifierProvider<FrameFetcher, APIFrame>((ref) {
+  return FrameFetcher();
+});
+
+// final lastFrameProvider = StateProvider((ref) {
+//   final APIFrame frame = ref.watch(frameProvider);
+//   if (frame != null) {
+//     return frame;
+//   }
+//   return null;
+// });
+
+// final sharedPrefs = FutureProvider<SharedPreferences>(
+//     (_) async => await SharedPreferences.getInstance());
+
+// class EchoVRIP extends StateNotifier<String> {
+//   EchoVRIP(this.pref) : super(pref?.getString("echoVRIP") ?? []);
+
+//   static final provider = StateNotifierProvider<EchoVRIP, String>((ref) {
+//     final pref = ref.watch(sharedPrefs).maybeWhen(
+//           data: (value) => value,
+//           orElse: () => '127.0.0.1',
+//         );
+//     return EchoVRIP(pref);
+//   });
+
+//   final SharedPreferences pref;
+
+//   void set(String ip) {
+//     state = ip;
+//     pref.setString("echoVRIP", state);
+//   }
+// }
+
+// class EchoVRPort extends StateNotifier<String> {
+//   EchoVRPort(this.pref) : super(pref?.getString("echoVRPort") ?? []);
+
+//   static final provider = StateNotifierProvider<EchoVRPort, String>((ref) {
+//     final pref = ref.watch(sharedPrefs).maybeWhen(
+//           data: (value) => value,
+//           orElse: () => '127.0.0.1',
+//         );
+//     return EchoVRPort(pref);
+//   });
+
+//   final SharedPreferences pref;
+
+//   void set(String ip) {
+//     state = ip;
+//     pref.setString("echoVRPort", state);
+//   }
+// }
 
 Future setMaxWindowSize() async {
   await DesktopWindow.setWindowSize(Size(560, 870));
@@ -53,30 +150,6 @@ Future setMaxWindowSize() async {
   await DesktopWindow.setMinWindowSize(Size(350, 570));
   await DesktopWindow.setMaxWindowSize(Size(800, 1000));
 }
-
-class EchoVRAPIClient {
-  Stream<APIFrame> getFrameStream() async* {
-    APIFrame frame = APIFrame();
-
-    final timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
-      fetchAPI();
-      setState(() {});
-    });
-    getEchoVRIP();
-    getEchoVRPort();
-  }
-}
-
-final echoVRAPIClientProvider = Provider<EchoVRAPIClient>(
-  (ref) {
-    return EchoVRAPIClient();
-  },
-);
-
-final frameProvider = StreamProvider<APIFrame>((ref) {
-  final wsClient = ref.watch(echoVRAPIClientProvider);
-  return wsClient.getFrameStream();
-});
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -86,8 +159,9 @@ class MyApp extends StatelessWidget {
       title: 'Spark Mini',
       // theme: IgniteTheme.darkTheme,
       theme: ThemeData(
+        useMaterial3: true,
         brightness: Brightness.dark,
-        primaryColor: Colors.red,
+        colorSchemeSeed: Colors.red,
       ),
       home: MyHomePage(
         title: 'Spark Mini',
@@ -101,15 +175,6 @@ class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title, @required this.restorationId})
       : super(key: key);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String restorationId;
   final String title;
 
@@ -120,556 +185,27 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
   final RestorableInt _currentPage = RestorableInt(0);
 
-  // final RestorableString _echoVRIP = RestorableString('127.0.0.1');
-  String echoVRIP = '127.0.0.1';
-  String echoVRPort = '6721';
-
-  // int atlasLinkStyle = 0;
-  // bool atlasLinkUseAngleBrackets = false;
-  // bool atlasLinkAppendTeamNames = false;
-  Timer timer;
-
-  String replayFilename = 'newReplay.echoreplay';
-  String replayFilePath = '';
-  SendPort logIsolatePort;
-  ReceivePort logIsolateReceivePort2 = ReceivePort();
-  bool storageAuthorized = false;
-
-  List fileList = new List();
-
-  // SharedPreferences prefs;
-  // Settings settings = new Settings();
-
-  Future<void> getReplayFilePath() async {
-    String folderName = 'replays';
-    if (Platform.isAndroid) {
-      Directory appDir = await getExternalStorageDirectory();
-      replayFilePath = p.join(appDir.path, folderName);
-    } else if (Platform.isWindows) {
-      Directory appDir = await getApplicationDocumentsDirectory();
-      replayFilePath = p.join(appDir.path, 'Spark-Mini', folderName);
-    } else {
-      Directory appDir = await getApplicationDocumentsDirectory();
-      replayFilePath = p.join(appDir.path, folderName);
-    }
-  }
-
   @override
   String get restorationId => widget.restorationId;
 
   @override
   void restoreState(RestorationBucket oldBucket, bool initialRestore) {
     registerForRestoration(_currentPage, 'bottom_navigation_tab_index');
-    // registerForRestoration(_echoVRIP, 'echovr_ip');
   }
 
   @override
   void initState() {
     super.initState();
-    getFilePermissions();
-    Map map = Map();
-    map['echoVRIP'] = echoVRIP;
-    map['echoVRPort'] = echoVRPort;
-    map['replayFilePath'] = replayFilePath;
-    map['replayFilename'] = replayFilename;
-    map['saveReplays'] = Settings().saveReplays;
-
-    // initLogIsolate();
-
-    //compute(computeFunction, map);
-    /*var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
-      compute(fullLogFetch, map);
-    });*/
-    timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
-      fetchAPI();
-      setState(() {});
-    });
-    getEchoVRIP();
-    getEchoVRPort();
   }
-
-  initLogIsolate() async {
-    await getFilePermissions();
-    var ourFirstReceivePort = new ReceivePort();
-    await Isolate.spawn(fullLogFetchIsolate, ourFirstReceivePort.sendPort);
-    logIsolatePort = await ourFirstReceivePort.first;
-    logIsolatePort.send([
-      'message 1',
-      logIsolateReceivePort2.sendPort,
-      echoVRIP,
-      echoVRPort,
-      replayFilePath,
-      replayFilename,
-      Settings().saveReplays
-    ]);
-    var msg = await logIsolateReceivePort2.first;
-    print('main received "$msg"');
-    var port3 = ReceivePort();
-    logIsolatePort.send(['message 2', port3.sendPort]);
-    port3.first.then((msg) {
-      print('main received "$msg"');
-    });
-
-    // use 'then' one more time
-    var port4 = ReceivePort();
-    logIsolatePort.send(['port 4', port4.sendPort]);
-    port4.first.then((msg) {
-      print('main received "$msg"');
-    });
-
-    print('end of main');
-  }
-
-  static void computeFunction(Map argsMap) async {
-    // var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
-    while (true) {
-      compute(fullLogFetch, argsMap);
-      sleep(const Duration(milliseconds: 33));
-    }
-    // });
-  }
-
-  static fullLogFetchIsolate(SendPort sendPort) async {
-    // open our receive port. this is like turning on
-    // our cellphone.
-    var ourReceivePort = ReceivePort();
-
-    // tell whoever created us what port they can reach us on
-    // (like giving them our phone number)
-    sendPort.send(ourReceivePort.sendPort);
-
-    // while(true) {
-    // listen for text messages that are sent to us,
-    // and respond to them with this algorithm
-    await for (var msg in ourReceivePort) {
-      var data = msg[0]; // the 1st element we receive should be their message
-      print('echo received "$data"');
-      SendPort replyToPort = msg[1]; // the 2nd element should be their port
-      String echoVRIP = msg[2];
-      String echoVRPort = msg[3];
-      String replayFilePath = msg[4];
-      String replayFilename = msg[5];
-      bool saveReplays = msg[6];
-      Map map = Map();
-      map['echoVRIP'] = echoVRIP;
-      map['echoVRPort'] = echoVRPort;
-      map['replayFilePath'] = replayFilePath;
-      map['replayFilename'] = replayFilename;
-      map['saveReplays'] = saveReplays;
-      /*while (true) {
-        try {
-          await fullLogFetch(map);
-        } catch (Exception) {
-
-        }
-        sleep(const Duration(milliseconds: 20));
-      }*/
-      Timer timer = Timer.periodic(Duration(milliseconds: 30), (Timer t) async {
-        if (saveReplays) {
-          await fullLogFetch(map);
-        }
-      });
-      /*while (true) {
-        */ /*try {
-          await fullLogFetch(map);
-        } catch (Exception) {
-
-        }*/ /*
-        sleep(const Duration(seconds: 20));
-      }*/
-      // }
-      // add a little delay to simulate some work being done
-      // Future.delayed(const Duration(milliseconds: 100), () {
-      //   // send a message back to the caller on their port,
-      //   // like calling them back after they left us a message
-      //   // (or if you prefer, they sent us a text message, and
-      //   // now we’re texting them a reply)
-      //   replyToPort.send('echo said: ' + data);
-      // });
-      //while(ourReceivePort.)
-      // you can close the ReceivePort if you want
-      //if (data == "bye") ourReceivePort.close();
-    }
-  }
-
-  static Future<void> fullLogFetch(Map argsMap) async {
-    String echoVRIP = argsMap['echoVRIP'];
-    String echoVRPort = argsMap['echoVRPort'];
-    String replayFilePath = argsMap['replayFilePath'];
-    String replayFilename = argsMap['replayFilename'];
-    bool saveReplays = argsMap['saveReplays'];
-    try {
-      //log(echoVRIP);
-      final response = await http
-          .get(Uri.http('$echoVRIP:$echoVRPort', 'session'))
-          .timeout(Duration(seconds: 2));
-      if (response.statusCode == 200) {
-        // If the server did return a 200 OK response,
-        // then parse the JSON.
-        // setState(() {
-        try {
-          String rawJSON = response.body;
-          // var newFrame = APIFrame.fromJson(jsonDecode(rawJSON));
-
-          try {
-            // switched match
-            // if (lastFrame.sessionid == null ||
-            //     lastFrame.sessionip != newFrame.sessionip) {}
-
-            // if (lastFrame.game_status == "post_match") {
-            //   // newFilename();
-            // }
-            if (saveReplays) {
-              if (!true) {
-                //getFilePermissions();
-                // code of read or write file in external storage (SD card)
-              } else {
-                saveReplayFrame(replayFilePath, replayFilename, rawJSON);
-              }
-            }
-            // Do something with the file.
-          } catch (e) {
-            print('Failed to process API data');
-          }
-          // lastFrame = newFrame;
-        } catch (e) {
-          print('Failed to parse API response');
-        }
-        // });
-      } else {
-        if (saveReplays) {
-          if (!true) {
-            //getFilePermissions();
-            // code of read or write file in external storage (SD card)
-          } else {
-            await saveReplayFrame(
-                replayFilePath, replayFilename, 'NOT IN GAME');
-          }
-        }
-        // If the server did not return a 200 OK response,
-        // then throw an exception.
-        // throw Exception('Failed to get game data');
-      }
-    } catch (SocketException) {
-      if (saveReplays) {
-        if (!true) {
-          //getFilePermissions();
-          // code of read or write file in external storage (SD card)
-        } else {
-          //newFilename();
-          saveReplayFrame(replayFilePath, replayFilename, 'NOT IN MATCH');
-        }
-      }
-      //print('Not in game');
-    }
-  }
-
-  static Future<void> saveReplayFrame(
-      String replayFilePath, String replayFilename, String data) async {
-    // generate the timestamp string
-    final DateTime now = DateTime.now();
-    final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
-    final String formattedNow = formatter.format(now);
-
-    // the file we are saving to
-    File file = File(p.join(replayFilePath, replayFilename));
-
-    // create file if it doesn't exist
-    if (!(await file.exists())) {
-      file.create(recursive: true);
-    }
-
-    // write the data
-    file.writeAsString('$formattedNow\t$data\n', mode: FileMode.append);
-  }
-
-  Future<void> getFilePermissions() async {
-    storageAuthorized = false;
-    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      storageAuthorized = true;
-    } else {
-      PermissionStatus permissionResult = await Permission.storage.status;
-      storageAuthorized = permissionResult.isGranted;
-    }
-    if (!storageAuthorized) {
-      // Either the permission was already granted before or the user just granted it.
-      if (await Permission.storage.request().isGranted) {
-        storageAuthorized = true;
-      }
-    }
-    // We didn't ask for permission yet or the permission has been denied before but not permanently.
-    if (storageAuthorized) {
-      await getReplayFilePath();
-      if (Settings().saveReplays) {
-        await newFilename();
-      }
-      try {
-        final myDir = Directory('$replayFilePath');
-        if (!await myDir.exists()) {
-          await myDir.create();
-        }
-        fileList = Directory("$replayFilePath").listSync();
-      } catch (Exception) {
-        fileList = new List();
-      }
-      // code of read or write file in external storage (SD card)
-    }
-  }
-
-  // Future<void> getEchoVRIP() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   try {
-  //     String newEchoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
-  //     setState(() {
-  //       echoVRIP = newEchoVRIP;
-  //     });
-  //   } catch (Exception) {
-  //     setState(() {
-  //       echoVRIP = '127.0.0.1';
-  //     });
-  //   }
-  // }
-  //
-  // Future<void> getEchoVRPort() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   try {
-  //     String newEchoVRPort = prefs.getString('echoVRPort') ?? '6721';
-  //     setState(() {
-  //       echoVRPort = newEchoVRPort;
-  //     });
-  //   } catch (Exception) {
-  //     setState(() {
-  //       echoVRPort = '6721';
-  //     });
-  //   }
-  // }
-  //
-  // Future<void> setEchoVRIP(String value) async {
-  //   setState(() {
-  //     echoVRIP = value;
-  //   });
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   prefs.setString('echoVRIP', value);
-  // }
-  //
-  // Future<void> setEchoVRPort(String value) async {
-  //   setState(() {
-  //     echoVRPort = value;
-  //   });
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   prefs.setString('echoVRPort', value);
-  // }
 
   @override
   void dispose() {
     _currentPage.dispose();
-    // _echoVRIP.dispose();
-    timer.cancel();
     super.dispose();
   }
 
-  Future<void> newFilename() async {
-    // lock(fileWritingLock) {
-    String lastFilename = replayFilename;
-    final DateTime now = DateTime.now();
-    final DateFormat formatter = DateFormat("yyyy-MM-dd_HH-mm-ss");
-    replayFilename = 'rec_${formatter.format(now)}.echoreplay';
-    print(replayFilename);
-    if (true) //(Settings.Default.useCompression)
-    {
-      if ((File(p.join(replayFilePath, lastFilename)).existsSync())) {
-        final file = File(p.join(replayFilePath, lastFilename));
-        var encoder = ZipFileEncoder();
-        encoder.create(
-            '${p.join(replayFilePath, lastFilename)}_ZIPPED.echoreplay');
-        encoder.addFile(file);
-        encoder.close();
-        try {
-          await file.delete();
-        } catch (e) {}
-      }
-    }
-    // if(!(File('$replayFilePath$replayFilename').existsSync())){
-    //     new File('$replayFilePath$replayFilename').createSync(recursive: true);
-    //     }
-    // if(File(replayFilename).exists() )
-    // }
-    final myDir = Directory('$replayFilePath');
-    if (!await myDir.exists()) {
-      await myDir.create(recursive: true);
-    }
-    fileList = Directory("$replayFilePath").listSync();
-  }
-
-  void fetchAPI() async {
-    try {
-      final response = await http
-          .get(Uri.http('$echoVRIP:$echoVRPort', 'session'))
-          .timeout(Duration(seconds: 2));
-      if (response.statusCode == 200 || response.statusCode == 500) {
-        // If the server did return a 200 OK response,
-        // then parse the JSON.
-        // setState(() {
-
-        try {
-          var newFrame = APIFrame.fromJson(jsonDecode(response.body));
-
-          try {
-            if (newFrame.sessionid != null) {
-              // switched match
-              if (lastFrame.sessionid == null ||
-                  lastFrame.sessionip != newFrame.sessionip) {
-                getIPAPI(newFrame.sessionip);
-              }
-
-              // player joined or left (or switched match)
-              for (int i = 0; i < 2; i++) {
-                if (lastFrame.sessionid == null ||
-                    lastFrame.sessionip != newFrame.sessionip ||
-                    lastFrame.teams[i].players.length !=
-                        newFrame.teams[i].players.length) {
-                  getTeamNameFromPlayerList(
-                      newFrame.teams[i].players
-                          .map<String>((p) => p.name)
-                          .toList(),
-                      i);
-                }
-              }
-              if (lastFrame.game_status == "post_match") {
-                // newFilename();
-              }
-              /*final DateTime now = DateTime.now();
-          final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
-          final String formattedNow = formatter.format(now);
-          print(formattedNow);
-          if (Settings().saveReplays) {
-            if (!permissionResult.isGranted) {
-              getFilePermissions();
-              // code of read or write file in external storage (SD card)
-            } else {
-              if (!(await File('$replayFilePath$replayFilename').exists())) {
-                new File('$replayFilePath$replayFilename').create(
-                    recursive: true);
-              }
-              var file = await File('$replayFilePath$replayFilename')
-                  .writeAsString('$formattedNow \t ${newFrame.toString()}\n', mode: FileMode.append);
-            }
-          }*/
-            }
-            // Do something with the file.
-          } catch (e) {
-            print('Failed to process API data');
-            inGame = false;
-          }
-          lastFrame = newFrame;
-          inGame = true;
-        } catch (e) {
-          print('Failed to parse API response');
-          inGame = false;
-        }
-        // });
-      }
-      // else if (response.statusCode == 500) {
-      //   if (response.body.startsWith(
-      //       '{"err_description":"Endpoint is restricted in this match type","err_code":-6}')) {
-      //     // IN LOBBY
-      //     inGame = true;
-      //   }
-      // }
-      else {
-        inGame = false;
-        /*if (Settings().saveReplays) {
-        if (!permissionResult.isGranted) {
-          getFilePermissions();
-          // code of read or write file in external storage (SD card)
-        } else {
-          newFilename();
-        }*/
-      }
-      // If the server did not return a 200 OK response,
-      // then throw an exception.
-      // throw Exception('Failed to get game data');
-    } catch (SocketException) {
-      if (Settings().saveReplays) {
-        if (!storageAuthorized) {
-          getFilePermissions();
-          // code of read or write file in external storage (SD card)
-        } else {
-          //newFilename();
-        }
-      }
-      print('Not in game: $echoVRIP');
-      inGame = false;
-    }
-  }
-
-  void getIPAPI(String ip) async {
-    print('Fetching from Ignite ip-api');
-    if (ip == null || ip == "") {
-      return;
-    }
-    final response =
-        await http.get(Uri.http('api.ignitevr.gg', 'ip_geolocation/$ip'));
-
-    if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
-      setState(() {
-        lastIPLocationResponse = jsonDecode(response.body);
-      });
-    } else {
-      // If the server did not return a 200 OK response,
-      // then throw an exception.
-      throw Exception('Failed to get game data');
-    }
-  }
-
-  void getTeamNameFromPlayerList(List<String> players, int teamIndex) async {
-    String playersList = jsonEncode(players);
-    var uri = Uri.https('api.ignitevr.gg', 'vrml/get_team_name_from_list',
-        {'player_list': '$playersList'});
-    final response = await http.get(uri);
-
-    if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
-      setState(() {
-        if (teamIndex == 0) {
-          blueVRMLTeamInfo = jsonDecode(response.body);
-        } else if (teamIndex == 1) {
-          orangeVRMLTeamInfo = jsonDecode(response.body);
-        }
-      });
-    } else {
-      // If the server did not return a 200 OK response,
-      // then throw an exception.
-      throw Exception('Failed to get player team info');
-    }
-  }
-
-// void getSharedPrefs() async {
-//   SharedPreferences prefs = await SharedPreferences.getInstance();
-//   setState(() {
-//     atlasLinkStyle = prefs.getInt('atlasLinkStyle');
-//     atlasLinkUseAngleBrackets =
-//         prefs.getBool('atlasLinkUseAngleBrackets') ?? true;
-//     atlasLinkAppendTeamNames =
-//         prefs.getBool('atlasLinkAppendTeamNames') ?? false;
-//     echoVRIP = prefs.getString('echoVRIP') ?? '127.0.0.1';
-//   });
-// }
-
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-
-    // getSharedPrefs();
-
     var bottomNavigationItems = <BottomNavigationBarItem>[
       BottomNavigationBarItem(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
@@ -686,46 +222,31 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
     ];
 
     List<Widget> _tabViews = [
-      DashboardWidget(inGame, lastFrame, lastIPLocationResponse,
-          orangeVRMLTeamInfo, blueVRMLTeamInfo, setEchoVRIP, setEchoVRPort),
-      AtlasWidget(
-        inGame: inGame,
-        frame: lastFrame,
-        ipLocation: lastIPLocationResponse,
-        echoVRIP: echoVRIP,
-        echoVRPort: echoVRPort,
-      ),
-      MatchRulesPage(
-        inGame: inGame,
-        frame: lastFrame,
-        echoVRIP: echoVRIP,
-        echoVRPort: echoVRPort,
-      ),
+      DashboardWidget(),
+      AtlasWidget(),
+      MatchRulesPage(),
       DebugPage(),
       // ReplayWidget(replayFilePath),
       // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),
-      SettingsWidget(
-          echoVRIP: echoVRIP,
-          setEchoVRIP: setEchoVRIP,
-          echoVRPort: echoVRPort,
-          setEchoVRPort: setEchoVRPort),
+      SettingsWidget(),
     ];
 
     return Scaffold(
       appBar: AppBar(
-          // Here we take the value from the MyHomePage object that was created by
-          // the App.build method, and use it to set our appbar title.
-          title: Text(widget.title),
-          backgroundColor: Colors.red),
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
+        // backgroundColor: Colors.red,
+      ),
       body: _tabViews[_currentPage.value],
       bottomNavigationBar: BottomNavigationBar(
         showUnselectedLabels: true,
         items: bottomNavigationItems,
         currentIndex: _currentPage.value,
-        type: BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.shifting,
         selectedItemColor: Colors.red,
-        // unselectedItemColor: Colors.white.withOpacity(.5),
+        unselectedItemColor: Colors.white.withOpacity(.5),
         // backgroundColor: Colors.black12,
         onTap: (index) {
           setState(() {
@@ -779,63 +300,6 @@ class Settings with ChangeNotifier {
     save();
   }
 
-  String getFormattedLink(
-      String sessionid,
-      Map<String, dynamic> orangeVRMLTeamInfo,
-      Map<String, dynamic> blueVRMLTeamInfo) {
-    if (sessionid == null) sessionid = '**********************';
-
-    String link = "";
-
-    if (atlasLinkUseAngleBrackets) {
-      switch (atlasLinkStyle) {
-        case 0:
-          link = "<spark://c/$sessionid>";
-          break;
-        case 1:
-          link = "<spark://j/$sessionid>";
-          break;
-        case 2:
-          link = "<spark://s/$sessionid>";
-          break;
-      }
-    } else {
-      switch (atlasLinkStyle) {
-        case 0:
-          link = "spark://c/$sessionid";
-          break;
-        case 1:
-          link = "spark://j/$sessionid";
-          break;
-        case 2:
-          link = "spark://s/$sessionid";
-          break;
-      }
-    }
-
-    if (atlasLinkAppendTeamNames) {
-      String orangeName = '?';
-      String blueName = '?';
-      if (orangeVRMLTeamInfo != null &&
-          orangeVRMLTeamInfo.containsKey('team_name') &&
-          orangeVRMLTeamInfo['team_name'] != '') {
-        orangeName = orangeVRMLTeamInfo['team_name'];
-      }
-      if (blueVRMLTeamInfo != null &&
-          blueVRMLTeamInfo.containsKey('team_name') &&
-          blueVRMLTeamInfo['team_name'] != '') {
-        blueName = blueVRMLTeamInfo['team_name'];
-      }
-
-      // if at least one team name exists
-      if (orangeName != '?' || blueName != '?') {
-        link = "$link $orangeName vs $blueName";
-      }
-    }
-
-    return link;
-  }
-
   Future<void> save() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setInt('atlasLinkStyle', atlasLinkStyle);
@@ -856,4 +320,3 @@ class Settings with ChangeNotifier {
       saveReplays = prefs.getBool('saveReplays');
   }
 }
-

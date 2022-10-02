@@ -1,0 +1,288 @@
+
+  String replayFilename = 'newReplay.echoreplay';
+  String replayFilePath = '';
+  SendPort logIsolatePort;
+  ReceivePort logIsolateReceivePort2 = ReceivePort();
+  bool storageAuthorized = false;
+
+
+
+
+  List fileList = new List();
+
+  initLogIsolate() async {
+    await getFilePermissions();
+    var ourFirstReceivePort = new ReceivePort();
+    await Isolate.spawn(fullLogFetchIsolate, ourFirstReceivePort.sendPort);
+    logIsolatePort = await ourFirstReceivePort.first;
+    logIsolatePort.send([
+      'message 1',
+      logIsolateReceivePort2.sendPort,
+      echoVRIP,
+      echoVRPort,
+      replayFilePath,
+      replayFilename,
+      Settings().saveReplays
+    ]);
+    var msg = await logIsolateReceivePort2.first;
+    print('main received "$msg"');
+    var port3 = ReceivePort();
+    logIsolatePort.send(['message 2', port3.sendPort]);
+    port3.first.then((msg) {
+      print('main received "$msg"');
+    });
+
+    // use 'then' one more time
+    var port4 = ReceivePort();
+    logIsolatePort.send(['port 4', port4.sendPort]);
+    port4.first.then((msg) {
+      print('main received "$msg"');
+    });
+
+    print('end of main');
+  }
+
+  static void computeFunction(Map argsMap) async {
+    // var timer = Timer.periodic(Duration(milliseconds: 33), (Timer t) {
+    while (true) {
+      compute(fullLogFetch, argsMap);
+      sleep(const Duration(milliseconds: 33));
+    }
+    // });
+  }
+
+  static fullLogFetchIsolate(SendPort sendPort) async {
+    // open our receive port. this is like turning on
+    // our cellphone.
+    var ourReceivePort = ReceivePort();
+
+    // tell whoever created us what port they can reach us on
+    // (like giving them our phone number)
+    sendPort.send(ourReceivePort.sendPort);
+
+    // while(true) {
+    // listen for text messages that are sent to us,
+    // and respond to them with this algorithm
+    await for (var msg in ourReceivePort) {
+      var data = msg[0]; // the 1st element we receive should be their message
+      print('echo received "$data"');
+      SendPort replyToPort = msg[1]; // the 2nd element should be their port
+      String echoVRIP = msg[2];
+      String echoVRPort = msg[3];
+      String replayFilePath = msg[4];
+      String replayFilename = msg[5];
+      bool saveReplays = msg[6];
+      Map map = Map();
+      map['echoVRIP'] = echoVRIP;
+      map['echoVRPort'] = echoVRPort;
+      map['replayFilePath'] = replayFilePath;
+      map['replayFilename'] = replayFilename;
+      map['saveReplays'] = saveReplays;
+      /*while (true) {
+        try {
+          await fullLogFetch(map);
+        } catch (Exception) {
+
+        }
+        sleep(const Duration(milliseconds: 20));
+      }*/
+      Timer timer = Timer.periodic(Duration(milliseconds: 30), (Timer t) async {
+        if (saveReplays) {
+          await fullLogFetch(map);
+        }
+      });
+      /*while (true) {
+        */ /*try {
+          await fullLogFetch(map);
+        } catch (Exception) {
+
+        }*/ /*
+        sleep(const Duration(seconds: 20));
+      }*/
+      // }
+      // add a little delay to simulate some work being done
+      // Future.delayed(const Duration(milliseconds: 100), () {
+      //   // send a message back to the caller on their port,
+      //   // like calling them back after they left us a message
+      //   // (or if you prefer, they sent us a text message, and
+      //   // now we’re texting them a reply)
+      //   replyToPort.send('echo said: ' + data);
+      // });
+      //while(ourReceivePort.)
+      // you can close the ReceivePort if you want
+      //if (data == "bye") ourReceivePort.close();
+    }
+  }
+
+  static Future<void> fullLogFetch(Map argsMap) async {
+    String echoVRIP = argsMap['echoVRIP'];
+    String echoVRPort = argsMap['echoVRPort'];
+    String replayFilePath = argsMap['replayFilePath'];
+    String replayFilename = argsMap['replayFilename'];
+    bool saveReplays = argsMap['saveReplays'];
+    try {
+      //log(echoVRIP);
+      final response = await http
+          .get(Uri.http('$echoVRIP:$echoVRPort', 'session'))
+          .timeout(Duration(seconds: 2));
+      if (response.statusCode == 200) {
+        // If the server did return a 200 OK response,
+        // then parse the JSON.
+        // setState(() {
+        try {
+          String rawJSON = response.body;
+          // var newFrame = APIFrame.fromJson(jsonDecode(rawJSON));
+
+          try {
+            // switched match
+            // if (lastFrame.sessionid == null ||
+            //     lastFrame.sessionip != newFrame.sessionip) {}
+
+            // if (lastFrame.game_status == "post_match") {
+            //   // newFilename();
+            // }
+            if (saveReplays) {
+              if (!true) {
+                //getFilePermissions();
+                // code of read or write file in external storage (SD card)
+              } else {
+                saveReplayFrame(replayFilePath, replayFilename, rawJSON);
+              }
+            }
+            // Do something with the file.
+          } catch (e) {
+            print('Failed to process API data');
+          }
+          // lastFrame = newFrame;
+        } catch (e) {
+          print('Failed to parse API response');
+        }
+        // });
+      } else {
+        if (saveReplays) {
+          if (!true) {
+            //getFilePermissions();
+            // code of read or write file in external storage (SD card)
+          } else {
+            await saveReplayFrame(
+                replayFilePath, replayFilename, 'NOT IN GAME');
+          }
+        }
+        // If the server did not return a 200 OK response,
+        // then throw an exception.
+        // throw Exception('Failed to get game data');
+      }
+    } catch (SocketException) {
+      if (saveReplays) {
+        if (!true) {
+          //getFilePermissions();
+          // code of read or write file in external storage (SD card)
+        } else {
+          //newFilename();
+          saveReplayFrame(replayFilePath, replayFilename, 'NOT IN MATCH');
+        }
+      }
+      //print('Not in game');
+    }
+  }
+
+  static Future<void> saveReplayFrame(
+      String replayFilePath, String replayFilename, String data) async {
+    // generate the timestamp string
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy/MM/dd HH:mm:ss.mmm');
+    final String formattedNow = formatter.format(now);
+
+    // the file we are saving to
+    File file = File(p.join(replayFilePath, replayFilename));
+
+    // create file if it doesn't exist
+    if (!(await file.exists())) {
+      file.create(recursive: true);
+    }
+
+    // write the data
+    file.writeAsString('$formattedNow\t$data\n', mode: FileMode.append);
+  }
+
+  Future<void> getFilePermissions() async {
+    storageAuthorized = false;
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      storageAuthorized = true;
+    } else {
+      PermissionStatus permissionResult = await Permission.storage.status;
+      storageAuthorized = permissionResult.isGranted;
+    }
+    if (!storageAuthorized) {
+      // Either the permission was already granted before or the user just granted it.
+      if (await Permission.storage.request().isGranted) {
+        storageAuthorized = true;
+      }
+    }
+    // We didn't ask for permission yet or the permission has been denied before but not permanently.
+    if (storageAuthorized) {
+      await getReplayFilePath();
+      if (Settings().saveReplays) {
+        await newFilename();
+      }
+      try {
+        final myDir = Directory('$replayFilePath');
+        if (!await myDir.exists()) {
+          await myDir.create();
+        }
+        fileList = Directory("$replayFilePath").listSync();
+      } catch (Exception) {
+        fileList = new List();
+      }
+      // code of read or write file in external storage (SD card)
+    }
+  }
+
+
+   Future<void> newFilename() async {
+    // lock(fileWritingLock) {
+    String lastFilename = replayFilename;
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat("yyyy-MM-dd_HH-mm-ss");
+    replayFilename = 'rec_${formatter.format(now)}.echoreplay';
+    print(replayFilename);
+    if (true) //(Settings.Default.useCompression)
+    {
+      if ((File(p.join(replayFilePath, lastFilename)).existsSync())) {
+        final file = File(p.join(replayFilePath, lastFilename));
+        var encoder = ZipFileEncoder();
+        encoder.create(
+            '${p.join(replayFilePath, lastFilename)}_ZIPPED.echoreplay');
+        encoder.addFile(file);
+        encoder.close();
+        try {
+          await file.delete();
+        } catch (e) {}
+      }
+    }
+    // if(!(File('$replayFilePath$replayFilename').existsSync())){
+    //     new File('$replayFilePath$replayFilename').createSync(recursive: true);
+    //     }
+    // if(File(replayFilename).exists() )
+    // }
+    final myDir = Directory('$replayFilePath');
+    if (!await myDir.exists()) {
+      await myDir.create(recursive: true);
+    }
+    fileList = Directory("$replayFilePath").listSync();
+  }
+
+  
+  Future<void> getReplayFilePath() async {
+    String folderName = 'replays';
+    if (Platform.isAndroid) {
+      Directory appDir = await getExternalStorageDirectory();
+      replayFilePath = p.join(appDir.path, folderName);
+    } else if (Platform.isWindows) {
+      Directory appDir = await getApplicationDocumentsDirectory();
+      replayFilePath = p.join(appDir.path, 'Spark-Mini', folderName);
+    } else {
+      Directory appDir = await getApplicationDocumentsDirectory();
+      replayFilePath = p.join(appDir.path, folderName);
+    }
+  }

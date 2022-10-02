@@ -1,254 +1,223 @@
-import 'dart:developer';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../Model/LinkTypes.dart';
 import '../main.dart';
-// import 'package:esys_flutter_share/esys_flutter_share.dart';
 
-class SettingsWidget extends StatefulWidget {
-  final setEchoVRIP;
-  final setEchoVRPort;
-  final String echoVRIP;
-  final String echoVRPort;
-  SettingsWidget(
-      {Key key,
-      this.echoVRIP,
-      this.setEchoVRIP,
-      this.echoVRPort,
-      this.setEchoVRPort})
-      : super(key: key);
-
-  final List<String> linkTypes = <String>['Choose', 'Player', 'Spectator'];
-
+class SettingsWidget extends ConsumerWidget {
   @override
-  State<StatefulWidget> createState() => SettingsState();
-}
-
-class SettingsState extends State<SettingsWidget> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(sharedPreferencesProvider);
+    final echoVRIP = ref.watch(echoVRIPProvider);
+    final echoVRPort = ref.watch(echoVRPortProvider);
     return ListView(padding: const EdgeInsets.all(12), children: <Widget>[
-      Container(child: Consumer<Settings>(builder: (context, settings, child) {
-        var inputDecoration = InputDecoration(
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
-          ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
-          ),
-          border: UnderlineInputBorder(
-            borderSide: BorderSide(color: Theme.of(context).primaryColor),
-          ),
-        );
-        return Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Card(
-            child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+      Container(
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        Card(
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 10,
+                ),
+                Text(
+                  "Connection",
+                  style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold),
+                ),
+                Row(children: <Widget>[
+                  Expanded(
+                    child: ListTile(
+                      leading: Icon(Icons.wifi_rounded),
+                      title: Text("Quest IP Address"),
+                      subtitle: Text(echoVRIP),
+                    ),
+                  ),
+                  Container(
+                    width: 125,
+                    child: TextField(
+                      maxLength: 15,
+                      // controller:
+                      //     new TextEditingController(text: echoVRIP),
+                      keyboardType: TextInputType.numberWithOptions(
+                          signed: true, decimal: true),
+                      cursorColor: Theme.of(context).primaryColor,
+                      // decoration: inputDecoration,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (value) {
+                        settings.setString('echoVRIP', value);
+                      },
+                    ),
+                  ),
                   SizedBox(
-                    height: 10,
+                    width: 20,
                   ),
-                  Text(
-                    "Connection",
-                    style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold),
+                ]),
+                SizedBox(
+                  height: 10,
+                ),
+                Row(children: <Widget>[
+                  Expanded(
+                    child: ListTile(
+                      leading: Icon(Icons.wifi_rounded),
+                      title: Text("Port (for PCVR)"),
+                      subtitle: Text(echoVRPort),
+                    ),
                   ),
-                  Row(children: <Widget>[
+                  Container(
+                    width: 125,
+                    child: TextField(
+                      maxLength: 15,
+                      // controller:
+                      //     new TextEditingController(text: echoVRIP),
+                      keyboardType: TextInputType.numberWithOptions(
+                          signed: true, decimal: true),
+                      cursorColor: Theme.of(context).primaryColor,
+                      // decoration: inputDecoration,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (value) {
+                        settings.setString('echoVRPort', value);
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    width: 20,
+                  ),
+                ]),
+                SizedBox(
+                  height: 10,
+                ),
+              ],
+            )
+          ]),
+        ),
+        Card(
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 10,
+                ),
+                Text(
+                  "Links",
+                  style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold),
+                ),
+                Row(children: <Widget>[
+                  Expanded(
+                    child: ListTile(
+                      title: Text("Link Type"),
+                      subtitle: Text("Join as spectator or player"),
+                    ),
+                  ),
+                  DropdownButton<String>(
+                      value: linkTypes[settings.getInt('linkType') ?? 0],
+                      items: linkTypes.map((value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (value) => {
+                            settings.setInt(
+                                'linkType', linkTypes.indexOf(value))
+                          }),
+                  SizedBox(
+                    width: 20,
+                  ),
+                ]),
+                Row(
+                  children: [
                     Expanded(
                       child: ListTile(
-                        leading: Icon(Icons.wifi_rounded),
-                        title: Text("Quest IP Address"),
-                        subtitle: Text(widget.echoVRIP),
+                        title: Text("Surround with <>"),
+                        subtitle: Text("Makes links clickable in Discord"),
                       ),
                     ),
-                    Container(
-                      width: 125,
-                      child: TextField(
-                        maxLength: 15,
-                        // controller:
-                        //     new TextEditingController(text: echoVRIP),
-                        keyboardType:
-                            TextInputType.numberWithOptions(signed: true, decimal: true),
-                        cursorColor: Theme.of(context).primaryColor,
-                        decoration: inputDecoration,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (value) {
-                          widget.setEchoVRIP(value);
-                        },
-                      ),
+                    Switch(
+                      value: settings.getBool('linkAngleBrackets'),
+                      onChanged: (bool value) {
+                        settings.setBool('linkAngleBrackets', value);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
                     ),
                     SizedBox(
                       width: 20,
                     ),
-                  ]),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Row(children: <Widget>[
+                  ],
+                ),
+                Row(
+                  children: [
                     Expanded(
                       child: ListTile(
-                        leading: Icon(Icons.wifi_rounded),
-                        title: Text("Port (for PCVR)"),
-                        subtitle: Text(widget.echoVRPort),
+                        title: Text("Append team names"),
+                        subtitle: Text(
+                            "Adds auto-detected VRML team names to the end"),
                       ),
                     ),
-                    Container(
-                      width: 125,
-                      child: TextField(
-                        maxLength: 15,
-                        // controller:
-                        //     new TextEditingController(text: echoVRIP),
-                        keyboardType:
-                            TextInputType.numberWithOptions(signed: true, decimal: true),
-                        cursorColor: Theme.of(context).primaryColor,
-                        decoration: inputDecoration,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (value) {
-                          widget.setEchoVRPort(value);
-                        },
-                      ),
+                    Switch(
+                      value: settings.getBool('linkAppendTeamNames'),
+                      onChanged: (bool value) {
+                        settings.setBool('linkAppendTeamNames', value);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
                     ),
                     SizedBox(
                       width: 20,
                     ),
-                  ]),
-                  SizedBox(
-                    height: 10,
-                  ),
-                ],
-              )
-            ]),
-          ),
-          Card(
-            child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Text(
-                    "Links",
-                    style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  Row(children: <Widget>[
-                    Expanded(
-                      child: ListTile(
-                        title: Text("Link Type"),
-                        subtitle: Text("Join as spectator or player"),
-                      ),
-                    ),
-                    DropdownButton<String>(
-                        value: widget.linkTypes[settings.atlasLinkStyle],
-                        items: widget.linkTypes.map((value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                        onChanged: (value) => {
-                              settings.setAtlasLinkStyle(
-                                  widget.linkTypes.indexOf(value))
-                            }),
-                    SizedBox(
-                      width: 20,
-                    ),
-                  ]),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ListTile(
-                          title: Text("Surround with <>"),
-                          subtitle: Text("Makes links clickable in Discord"),
-                        ),
-                      ),
-                      Switch(
-                        value: settings.atlasLinkUseAngleBrackets,
-                        onChanged: (bool value) {
-                          settings.setAtlasLinkUseAngleBrackets(value);
-                        },
-                        activeColor: Theme.of(context).primaryColor,
-                      ),
-                      SizedBox(
-                        width: 20,
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ListTile(
-                          title: Text("Append team names"),
-                          subtitle: Text(
-                              "Adds auto-detected VRML team names to the end"),
-                        ),
-                      ),
-                      Switch(
-                        value: settings.atlasLinkAppendTeamNames,
-                        onChanged: (bool value) {
-                          settings.setAtlasLinkAppendTeamNames(value);
-                        },
-                        activeColor: Theme.of(context).primaryColor,
-                      ),
-                      SizedBox(
-                        width: 20,
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                ],
-              )
-            ]),
-          ),
-          // Card(
-          //     child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          //   Column(mainAxisSize: MainAxisSize.min, children: [
-          //     SizedBox(
-          //       height: 10,
-          //     ),
-          //     Text(
-          //       "Replays",
-          //       style: TextStyle(
-          //         color: Theme.of(context).primaryColor,
-          //         fontWeight: FontWeight.bold,
-          //       ),
-          //     ),
-          //     SizedBox(
-          //       width: 20,
-          //     ),
-          //     Row(children: [
-          //       Expanded(
-          //         child: ListTile(
-          //           title: Text("Save Replays"),
-          //           subtitle: Text(
-          //               "Replays are recorded in the .echoreplay file format, which contains all API data from the game. Echoreplay files to not contain any video or audio data. The most common use of .echoreplay files is in the Echo VR Replay Viewer"),
-          //         ),
-          //       ),
-          //       Switch(
-          //         value: settings.saveReplays,
-          //         onChanged: (bool value) {
-          //           settings.setSaveReplays(value);
-          //         },
-          //         activeColor: Theme.of(context).primaryColor,
-          //       ),
-          //       SizedBox(
-          //         width: 20,
-          //       ),
-          //     ]),
-          //     SizedBox(
-          //       height: 10,
-          //     ),
-          //   ]),
-          // ]))
-        ]);
-      }))
+                  ],
+                ),
+                SizedBox(
+                  height: 10,
+                ),
+              ],
+            )
+          ]),
+        ),
+        // Card(
+        //     child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        //   Column(mainAxisSize: MainAxisSize.min, children: [
+        //     SizedBox(
+        //       height: 10,
+        //     ),
+        //     Text(
+        //       "Replays",
+        //       style: TextStyle(
+        //         color: Theme.of(context).primaryColor,
+        //         fontWeight: FontWeight.bold,
+        //       ),
+        //     ),
+        //     SizedBox(
+        //       width: 20,
+        //     ),
+        //     Row(children: [
+        //       Expanded(
+        //         child: ListTile(
+        //           title: Text("Save Replays"),
+        //           subtitle: Text(
+        //               "Replays are recorded in the .echoreplay file format, which contains all API data from the game. Echoreplay files to not contain any video or audio data. The most common use of .echoreplay files is in the Echo VR Replay Viewer"),
+        //         ),
+        //       ),
+        //       Switch(
+        //         value: settings.saveReplays,
+        //         onChanged: (bool value) {
+        //           settings.setSaveReplays(value);
+        //         },
+        //         activeColor: Theme.of(context).primaryColor,
+        //       ),
+        //       SizedBox(
+        //         width: 20,
+        //       ),
+        //     ]),
+        //     SizedBox(
+        //       height: 10,
+        //     ),
+        //   ]),
+        // ]))
+      ]))
     ]);
   }
 }
