@@ -95,6 +95,22 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
                           )
                         ]),
                   );
+                } else if (frame.err_code == -7) {
+                  // In loading screen
+                  return Card(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          ListTile(
+                            title: Center(
+                                heightFactor: 1.5,
+                                child: Text(
+                                  'In loading screen...',
+                                  textScaleFactor: 1.5,
+                                )),
+                          )
+                        ]),
+                  );
                 }
               } else {
                 // in game
@@ -483,12 +499,14 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
                       children: <Widget>[
                         ExpansionTile(
                           title: ListTile(
+                            contentPadding: EdgeInsets.all(0),
                             leading: (() {
                               if (orangeVRMLTeamInfo.containsKey('count') &&
                                   orangeVRMLTeamInfo['count'] > 1) {
                                 return Container(
                                     child: Image.network(
                                   orangeVRMLTeamInfo['team_logo'],
+                                  width: 40,
                                 ));
                               } else {
                                 return Icon(
@@ -508,7 +526,14 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
                             //     ]),
                             // tileColor: Colors.orange,
                             title: Text(
-                              'Orange Team',
+                              (() {
+                                if (orangeVRMLTeamInfo.containsKey('count') &&
+                                    orangeVRMLTeamInfo['count'] > 1) {
+                                  return orangeVRMLTeamInfo['team_name'];
+                                } else {
+                                  return 'Orange Team';
+                                }
+                              }()),
                               style: TextStyle(color: Colors.orange),
                             ),
                             subtitle: Text(() {
@@ -562,12 +587,14 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
                       children: <Widget>[
                         ExpansionTile(
                           title: ListTile(
+                            contentPadding: EdgeInsets.all(0),
                             leading: (() {
                               if (blueVRMLTeamInfo.containsKey('count') &&
                                   blueVRMLTeamInfo['count'] > 1) {
                                 return Container(
                                     child: Image.network(
                                   blueVRMLTeamInfo['team_logo'],
+                                  width: 40,
                                 ));
                               } else {
                                 return Icon(
@@ -577,7 +604,14 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
                               }
                             }()),
                             title: Text(
-                              'Blue Team',
+                              (() {
+                                if (blueVRMLTeamInfo.containsKey('count') &&
+                                    blueVRMLTeamInfo['count'] > 1) {
+                                  return blueVRMLTeamInfo['team_name'];
+                                } else {
+                                  return 'Blue Team';
+                                }
+                              }()),
                               style: TextStyle(color: Colors.blue),
                             ),
                             subtitle: Text(() {
@@ -670,7 +704,18 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
-                  "Not Connected.\n\nMake sure your Quest is on the same WiFi network as this device and EchoVR is open and in a match/lobby, then click the button below.",
+                  "Not Connected.\n\nMake sure:",
+                  textScaleFactor: 1.3,
+                  textAlign: TextAlign.center,
+                ),
+                Text(
+                  "1. Your Quest is on the same WiFi network as this device\n2. Echo VR is open\n3. You are in a match/lobby",
+                  textScaleFactor: 1.3,
+                  textAlign: TextAlign.left,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  "Then click the button below.",
                   textScaleFactor: 1.3,
                   textAlign: TextAlign.center,
                 ),
@@ -678,16 +723,20 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
                 (() {
                   if (!findingQuestIP) {
                     return ElevatedButton(
-                        onPressed: () async {
-                          await findQuestIP();
-                        },
-                        child: Text("Find Quest IP",
-                            style: TextStyle(fontSize: 18)),
-                        style: ElevatedButton.styleFrom(
-                          primary: Colors.red, // background
-                          onPrimary: Colors.white, // foreground
-                          padding: EdgeInsets.all(20),
-                        ));
+                      onPressed: () async {
+                        await findQuestIP();
+                      },
+                      child:
+                          Text("Find Quest IP", style: TextStyle(fontSize: 18)),
+                      style: ElevatedButton.styleFrom(
+                        // primary: Colors.red, // background
+                        // onPrimary: Colors.white, // foreground
+                        onPrimary:
+                            Theme.of(context).colorScheme.onPrimaryContainer,
+                        primary: Theme.of(context).colorScheme.primaryContainer,
+                        padding: EdgeInsets.all(20),
+                      ),
+                    );
                   } else {
                     return Center(child: const CircularProgressIndicator());
                   }
@@ -774,9 +823,10 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
           setState(() {
             findingQuestIP = false;
             print("Found EchoVR IP: $ip");
-            // TODO set prefs
-            // widget.setEchoVRIP(ip);
-            // widget.setEchoVRPort("6721");
+            final settings = ref.read(sharedPreferencesProvider);
+            settings.setString('echoVRIP', ip);
+            settings.setString('echoVRPort', '6721');
+            ref.refresh(sharedPreferencesProvider);
           });
           return ip;
         }

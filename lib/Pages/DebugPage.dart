@@ -3,13 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
 import 'dart:developer' as developer;
-import 'package:http/http.dart' as http;
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:provider/provider.dart';
-import '../Keys.dart';
-import '../MatchJoiner.dart';
 import '../main.dart';
 
 class DebugPage extends StatefulWidget {
@@ -67,17 +63,14 @@ class DebugPageState extends State<DebugPage> {
                     ))
                 .toList());
       }()),
-      floatingActionButton: Consumer<Settings>(
-        builder: (context, settings, child) => FloatingActionButton(
-          onPressed: () {
-            fetchIPInfo();
-            _initNetworkInfo();
-            _enablePlatformOverrideForDesktop();
-          },
-          child: const Icon(Icons.refresh),
-          tooltip: "Retry",
-          backgroundColor: Colors.red,
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          fetchIPInfo();
+          _initNetworkInfo();
+          _enablePlatformOverrideForDesktop();
+        },
+        child: const Icon(Icons.refresh),
+        tooltip: "Retry",
       ),
     );
   }
@@ -96,7 +89,6 @@ class DebugPageState extends State<DebugPage> {
     //   wifiGateway = await info.getWifiGatewayIP(); // 192.168.1.1
     // });
   }
-
 
   Future<void> _initNetworkInfo() async {
     String wifiName,

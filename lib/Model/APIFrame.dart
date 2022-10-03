@@ -1,5 +1,5 @@
 class APIFrame {
-  final int err_code;
+  int err_code;
   final String err_description;
   final String sessionid;
   final String sessionip;

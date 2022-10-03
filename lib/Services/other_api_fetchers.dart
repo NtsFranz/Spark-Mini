@@ -22,10 +22,14 @@ Future<Map<String, dynamic>> getIPAPI(String ip) async {
 }
 
 Future<Map<String, dynamic>> getTeamNameFromPlayerList(
-    List<String> players, int teamIndex) async {
-  String playersList = jsonEncode(players);
+    List<String> players) async {
+  return getTeamNameFromPlayersJson(jsonEncode(players));
+}
+
+Future<Map<String, dynamic>> getTeamNameFromPlayersJson(
+    String playersJson) async {
   var uri = Uri.https('api.ignitevr.gg', 'vrml/get_team_name_from_list',
-      {'player_list': '$playersList'});
+      {'player_list': '$playersJson'});
   final response = await http.get(uri);
 
   if (response.statusCode == 200) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spark_mini/Model/ColorSchemes.dart';
 import '../Model/LinkTypes.dart';
 import '../main.dart';
 
@@ -22,9 +23,7 @@ class SettingsWidget extends ConsumerWidget {
                 ),
                 Text(
                   "Connection",
-                  style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Row(children: <Widget>[
                   Expanded(
@@ -42,11 +41,11 @@ class SettingsWidget extends ConsumerWidget {
                       //     new TextEditingController(text: echoVRIP),
                       keyboardType: TextInputType.numberWithOptions(
                           signed: true, decimal: true),
-                      cursorColor: Theme.of(context).primaryColor,
                       // decoration: inputDecoration,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (value) {
                         settings.setString('echoVRIP', value);
+                        ref.refresh(sharedPreferencesProvider);
                       },
                     ),
                   ),
@@ -73,11 +72,11 @@ class SettingsWidget extends ConsumerWidget {
                       //     new TextEditingController(text: echoVRIP),
                       keyboardType: TextInputType.numberWithOptions(
                           signed: true, decimal: true),
-                      cursorColor: Theme.of(context).primaryColor,
                       // decoration: inputDecoration,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (value) {
                         settings.setString('echoVRPort', value);
+                        ref.refresh(sharedPreferencesProvider);
                       },
                     ),
                   ),
@@ -102,9 +101,7 @@ class SettingsWidget extends ConsumerWidget {
                 ),
                 Text(
                   "Links",
-                  style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Row(children: <Widget>[
                   Expanded(
@@ -121,10 +118,10 @@ class SettingsWidget extends ConsumerWidget {
                           child: Text(value),
                         );
                       }).toList(),
-                      onChanged: (value) => {
-                            settings.setInt(
-                                'linkType', linkTypes.indexOf(value))
-                          }),
+                      onChanged: (value) {
+                        settings.setInt('linkType', linkTypes.indexOf(value));
+                        ref.refresh(sharedPreferencesProvider);
+                      }),
                   SizedBox(
                     width: 20,
                   ),
@@ -141,8 +138,8 @@ class SettingsWidget extends ConsumerWidget {
                       value: settings.getBool('linkAngleBrackets'),
                       onChanged: (bool value) {
                         settings.setBool('linkAngleBrackets', value);
+                        ref.refresh(sharedPreferencesProvider);
                       },
-                      activeColor: Theme.of(context).primaryColor,
                     ),
                     SizedBox(
                       width: 20,
@@ -162,8 +159,88 @@ class SettingsWidget extends ConsumerWidget {
                       value: settings.getBool('linkAppendTeamNames'),
                       onChanged: (bool value) {
                         settings.setBool('linkAppendTeamNames', value);
+                        ref.refresh(sharedPreferencesProvider);
                       },
-                      activeColor: Theme.of(context).primaryColor,
+                    ),
+                    SizedBox(
+                      width: 20,
+                    ),
+                  ],
+                ),
+                SizedBox(
+                  height: 10,
+                ),
+              ],
+            )
+          ]),
+        ),
+        Card(
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 10,
+                ),
+                Text(
+                  "Spark Mini Settings",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Row(children: <Widget>[
+                  Expanded(
+                    child: ListTile(
+                      title: Text("Accent Color"),
+                    ),
+                  ),
+                  DropdownButton<String>(
+                      value: colorSchemes[settings.getInt('colorScheme') ?? 2]
+                          ['name'],
+                      items: colorSchemes.map((value) {
+                        return DropdownMenuItem<String>(
+                          value: value['name'],
+                          child: Wrap(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 10),
+                                child: Icon(
+                                  Icons.color_lens,
+                                  color: colorSchemes.singleWhere(
+                                      (element) => element == value)['color'],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 20),
+                                child: Text(colorSchemes.singleWhere(
+                                    (element) => element == value)['name']),
+                              )
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        settings.setInt(
+                            'colorScheme',
+                            colorSchemes.indexWhere(
+                                (element) => element['name'] == value));
+                        ref.refresh(sharedPreferencesProvider);
+                      }),
+                  SizedBox(
+                    width: 20,
+                  ),
+                ]),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListTile(
+                        title: Text("Dark Mode"),
+                      ),
+                    ),
+                    Switch(
+                      value: settings.getBool('darkMode') ?? true,
+                      onChanged: (bool value) {
+                        settings.setBool('darkMode', value);
+                        ref.refresh(sharedPreferencesProvider);
+                      },
                     ),
                     SizedBox(
                       width: 20,
@@ -186,7 +263,6 @@ class SettingsWidget extends ConsumerWidget {
         //     Text(
         //       "Replays",
         //       style: TextStyle(
-        //         color: Theme.of(context).primaryColor,
         //         fontWeight: FontWeight.bold,
         //       ),
         //     ),
@@ -205,8 +281,8 @@ class SettingsWidget extends ConsumerWidget {
         //         value: settings.saveReplays,
         //         onChanged: (bool value) {
         //           settings.setSaveReplays(value);
+        //           ref.refresh(sharedPreferencesProvider);
         //         },
-        //         activeColor: Theme.of(context).primaryColor,
         //       ),
         //       SizedBox(
         //         width: 20,

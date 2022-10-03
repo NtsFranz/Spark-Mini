@@ -3,21 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import '../Keys.dart';
 import '../MatchJoiner.dart';
 import '../Model/APIFrame.dart';
 import '../Services/spark_links.dart';
 import '../main.dart';
 
-class AtlasWidget extends ConsumerStatefulWidget {
-  const AtlasWidget({Key key}) : super(key: key);
+class ShareWidget extends ConsumerStatefulWidget {
+  const ShareWidget({Key key}) : super(key: key);
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => AtlasState();
+  ConsumerState<ConsumerStatefulWidget> createState() => ShareWidgetState();
 }
 
-class AtlasState extends ConsumerState<AtlasWidget> {
+class ShareWidgetState extends ConsumerState<ShareWidget> {
   Map<String, dynamic> hostedMatches;
   bool fetching = false;
 
@@ -26,7 +25,7 @@ class AtlasState extends ConsumerState<AtlasWidget> {
     super.initState();
 
     final APIFrame initFrame = ref.read(frameProvider);
-    fetchMatches(initFrame.client_name);
+    fetchMatches(initFrame?.client_name ?? "_");
   }
 
   @override
@@ -45,11 +44,14 @@ class AtlasState extends ConsumerState<AtlasWidget> {
           MatchJoiner(
               inGame: inGame, echoVRIP: echoVRIP, echoVRPort: echoVRPort),
           (() {
-            if (frame.private_match != null && frame.private_match) {
+            if (frame?.private_match != null && frame.private_match) {
               return Container(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                      primary: Colors.red, padding: EdgeInsets.all(24)),
+                    primary: Theme.of(context).colorScheme.primaryContainer,
+                    onPrimary: Theme.of(context).colorScheme.onPrimaryContainer,
+                    padding: EdgeInsets.all(24),
+                  ),
                   onPressed: (() {
                     hostMatch(frame, ipLocation);
                   }),
@@ -61,7 +63,7 @@ class AtlasState extends ConsumerState<AtlasWidget> {
               return Container(
                 child: Center(
                     child: Text(
-                  'Not in Match.\n\nWhen you are in a private match, you can post your match here for others to see.',
+                  'Not in Private Match.\n\nWhen you are in a private match, you can post your match here for others to see.',
                   textScaleFactor: 1.3,
                   textAlign: TextAlign.center,
                 )),
@@ -75,13 +77,16 @@ class AtlasState extends ConsumerState<AtlasWidget> {
               matches = matches + hostedMatches['matches'];
             }
 
-            if (frame.private_match != null &&
+            if (frame?.private_match != null &&
                 frame.private_match &&
                 matches.length > 0) {
               return Container(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                      primary: Colors.red, padding: EdgeInsets.all(14)),
+                    primary: Theme.of(context).colorScheme.primaryContainer,
+                    onPrimary: Theme.of(context).colorScheme.onPrimaryContainer,
+                    padding: EdgeInsets.all(14),
+                  ),
                   onPressed: (() {
                     unhostMatch(frame);
                   }),
@@ -261,11 +266,11 @@ class AtlasState extends ConsumerState<AtlasWidget> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          fetchMatches(frame.client_name);
+          fetchMatches(frame?.client_name ?? "_");
         },
         child: const Icon(Icons.refresh),
         tooltip: "Refresh Matches",
-        backgroundColor: Colors.red,
+        // backgroundColor: Colors.red,
       ),
     );
   }
@@ -286,6 +291,11 @@ class AtlasState extends ConsumerState<AtlasWidget> {
         fetching = false;
       });
     } else {
+      print(response.statusCode);
+      setState(() {
+        fetching = false;
+      });
+
       // If the server did not return a 200 OK response,
       // then throw an exception.
       throw Exception('Failed to get ignite atlas matches');

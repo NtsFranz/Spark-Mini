@@ -24,8 +24,23 @@ class MatchRulesPageState extends ConsumerState<MatchRulesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final APIFrame frame = ref.watch(frameProvider);
-    final bool inGame = ref.watch(inGameProvider);
+    final bool private_match = ref
+        .watch(frameProvider.select((value) => value?.private_match ?? false));
+    final String rules_changed_by = ref
+        .watch(frameProvider.select((value) => value?.rules_changed_by ?? ""));
+    final int client_team = ref.watch(frameProvider.select((frame) {
+      if (frame == null) return -1;
+      final client_name = frame.client_name;
+      for (int t = 0; t < 3; t++) {
+        for (int p = 0; p < frame.teams[t].players.length; p++) {
+          if (frame.teams[t].players[p].name == client_name) {
+            return t;
+          }
+        }
+      }
+      return -1;
+    }));
+    final bool inGame = ref.watch(inGameProvider.select((value) => value));
     final echoVRIP = ref.watch(echoVRIPProvider);
     final echoVRPort = ref.watch(echoVRPortProvider);
 
@@ -33,14 +48,77 @@ class MatchRulesPageState extends ConsumerState<MatchRulesPage> {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: <Widget>[
+          SizedBox(height: 10),
+          (() {
+            if (private_match && client_team >= 0 && client_team < 2) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () async {
+                      await http.post(
+                          Uri.http('$echoVRIP:$echoVRPort', 'set_ready'),
+                          body: json.encode({'team_idx': client_team}));
+                    },
+                    child: Row(children: [
+                      Text('Ready Up'),
+                      Icon(Icons.arrow_upward),
+                    ]),
+                    style: ElevatedButton.styleFrom(
+                      primary: Theme.of(context).colorScheme.primaryContainer,
+                      onPrimary:
+                          Theme.of(context).colorScheme.onPrimaryContainer,
+                      padding: EdgeInsets.all(14),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await http.post(
+                          Uri.http('$echoVRIP:$echoVRPort', 'set_pause'),
+                          body: json.encode({'team_idx': client_team}));
+                    },
+                    child: Row(children: [
+                      Text('Pause'),
+                      Icon(Icons.pause),
+                    ]),
+                    style: ElevatedButton.styleFrom(
+                      primary: Theme.of(context).colorScheme.primaryContainer,
+                      onPrimary:
+                          Theme.of(context).colorScheme.onPrimaryContainer,
+                      padding: EdgeInsets.all(14),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await http.post(
+                          Uri.http('$echoVRIP:$echoVRPort', 'restart_request'),
+                          body: json.encode({'team_idx': client_team}));
+                    },
+                    child: Row(children: [
+                      Text('Reset'),
+                      Icon(Icons.restart_alt),
+                    ]),
+                    style: ElevatedButton.styleFrom(
+                      primary: Theme.of(context).colorScheme.primaryContainer,
+                      onPrimary:
+                          Theme.of(context).colorScheme.onPrimaryContainer,
+                      padding: EdgeInsets.all(14),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Container();
+            }
+          }()),
           Container(
             child: Center(
                 child: Text(
               (() {
-                if (inGame &&
-                    frame.private_match != null &&
-                    frame.private_match) {
-                  return "Rules last changed by: ${frame.rules_changed_by}";
+                if (inGame && private_match != null && private_match) {
+                  return "Rules last changed by: ${rules_changed_by}";
                 } else {
                   return "Not in private match.";
                 }
@@ -66,7 +144,13 @@ class MatchRulesPageState extends ConsumerState<MatchRulesPage> {
                         margin: EdgeInsets.all(8),
                         child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              primary: Colors.red,
+                              primary: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
+                              onPrimary: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
+                              // primary: Colors.red,
                               padding: EdgeInsets.all(26),
                               minimumSize: Size.fromHeight(40),
                             ),
@@ -98,7 +182,6 @@ class MatchRulesPageState extends ConsumerState<MatchRulesPage> {
         },
         child: const Icon(Icons.refresh),
         tooltip: "Fetch Presets",
-        backgroundColor: Colors.red,
       ),
     );
   }
@@ -108,7 +191,7 @@ class MatchRulesPageState extends ConsumerState<MatchRulesPage> {
       fetchingPresets = true;
     });
     final response =
-        await http.get(Uri.https('api.ignitevr.gg', 'private_match_rules'));
+        await http.get(Uri.https('api.ignitevr.gg', 'v2/private_match_rules'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,

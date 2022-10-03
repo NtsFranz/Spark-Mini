@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
-import 'Keys.dart';
-import 'main.dart';
 
 class MatchJoiner extends StatefulWidget {
   final bool inGame;
@@ -106,7 +102,7 @@ class MatchJoinerState extends State<MatchJoiner> {
                   TextButton(
                     child: const Text('JOIN MATCH'),
                     style: TextButton.styleFrom(
-                      primary: Colors.red, // background
+                      primary: Theme.of(context).colorScheme.primary,
                       padding: EdgeInsets.all(20),
                     ),
                     onPressed: () async {

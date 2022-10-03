@@ -1,27 +1,21 @@
+import 'dart:convert';
 import 'dart:developer';
-import 'package:archive/archive_io.dart';
 import 'package:desktop_window/desktop_window.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
 import 'package:spark_mini/Pages/MatchRulesPage.dart';
 import 'Model/APIFrame.dart';
-import 'Pages/AtlasWidget.dart';
+import 'Model/ColorSchemes.dart';
+import 'Pages/ShareWidget.dart';
 import 'Pages/DashboardWidget.dart';
 import 'Pages/DebugPage.dart';
 import 'Pages/SettingsWidget.dart';
-import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:isolate';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'Services/FrameFetcher.dart';
+import 'Services/frame_fetcher.dart';
+import 'Services/other_api_fetchers.dart';
 import 'Services/spark_links.dart';
 
 Future<void> main() async {
@@ -41,14 +35,72 @@ Future<void> main() async {
   ));
 }
 
-final ipLocationResponseProvider =
-    StateProvider((ref) => Map<String, dynamic>());
-final orangeTeamVRMLInfoProvider =
-    StateProvider((ref) => Map<String, dynamic>());
-final blueTeamVRMLInfoProvider = StateProvider((ref) => Map<String, dynamic>());
+final ipLocationFutureProvider = FutureProvider((ref) async {
+  final ip = ref.watch(frameProvider.select((value) => value.sessionip));
+  if (ip != '') {
+    return await getIPAPI(ip);
+  } else {
+    return Map<String, dynamic>();
+  }
+});
+
+final ipLocationResponseProvider = StateProvider<Map<String, dynamic>>((ref) {
+  AsyncValue<Map<String, dynamic>> resp = ref.watch(ipLocationFutureProvider);
+
+  return resp.when(
+    loading: () => Map<String, dynamic>(),
+    error: (err, stack) => Map<String, dynamic>(),
+    data: (value) {
+      return value;
+    },
+  );
+});
+
+final orangeTeamVRMLInfoProvider = StateProvider((ref) {
+  final f = ref.watch(orangeTeamVRMLInfoFutureProvider);
+
+  return f.when(
+      data: (data) => data,
+      error: (e1, e2) => Map<String, dynamic>(),
+      loading: () => Map<String, dynamic>());
+});
+
+final orangeTeamVRMLInfoFutureProvider = FutureProvider((ref) async {
+  final players = ref.watch(frameProvider.select((value) =>
+      jsonEncode(value?.teams[1].players.map((e) => e.name).toList())));
+  if (players != null) {
+    return await getTeamNameFromPlayersJson(players);
+  } else {
+    return Map<String, dynamic>();
+  }
+});
+
+final blueTeamVRMLInfoProvider = StateProvider((ref) {
+  final f = ref.watch(blueTeamVRMLInfoFutureProvider);
+
+  return f.when(
+      data: (data) => data,
+      error: (e1, e2) => Map<String, dynamic>(),
+      loading: () => Map<String, dynamic>());
+});
+
+final blueTeamVRMLInfoFutureProvider = FutureProvider((ref) async {
+  final players = ref.watch(frameProvider.select((value) =>
+      jsonEncode(value?.teams[0].players.map((e) => e.name).toList())));
+  if (players != null) {
+    return await getTeamNameFromPlayersJson(players);
+  } else {
+    return Map<String, dynamic>();
+  }
+});
+
+// TODO this refreshes every frame
 final inGameProvider = StateProvider((ref) {
   final APIFrame frame = ref.watch(frameProvider);
   return frame != null;
+});
+final sessionIPProvider = StateProvider<String>((ref) {
+  return ref.watch(frameProvider)?.sessionip ?? "";
 });
 final sparkLinkProvider = StateProvider<String>((ref) {
   final APIFrame frame = ref.watch(frameProvider);
@@ -57,12 +109,13 @@ final sparkLinkProvider = StateProvider<String>((ref) {
   final blue = ref.watch(blueTeamVRMLInfoProvider);
   if (frame != null) {
     return getFormattedLink(
-        frame.sessionid,
-        prefs.getBool('linkAngleBrackets') ?? true,
-        prefs.getInt('linkType') ?? 0,
-        prefs.getBool('linkAppendTeamNames') ?? false,
-        orange,
-        blue);
+      frame.sessionid,
+      prefs.getBool('linkAngleBrackets') ?? true,
+      prefs.getInt('linkType') ?? 0,
+      prefs.getBool('linkAppendTeamNames') ?? false,
+      orange,
+      blue,
+    );
   } else {
     return "";
   }
@@ -92,57 +145,8 @@ final echoVRPortProvider = StateProvider<String>((ref) {
 });
 
 final frameProvider = StateNotifierProvider<FrameFetcher, APIFrame>((ref) {
-  return FrameFetcher();
+  return FrameFetcher(ref);
 });
-
-// final lastFrameProvider = StateProvider((ref) {
-//   final APIFrame frame = ref.watch(frameProvider);
-//   if (frame != null) {
-//     return frame;
-//   }
-//   return null;
-// });
-
-// final sharedPrefs = FutureProvider<SharedPreferences>(
-//     (_) async => await SharedPreferences.getInstance());
-
-// class EchoVRIP extends StateNotifier<String> {
-//   EchoVRIP(this.pref) : super(pref?.getString("echoVRIP") ?? []);
-
-//   static final provider = StateNotifierProvider<EchoVRIP, String>((ref) {
-//     final pref = ref.watch(sharedPrefs).maybeWhen(
-//           data: (value) => value,
-//           orElse: () => '127.0.0.1',
-//         );
-//     return EchoVRIP(pref);
-//   });
-
-//   final SharedPreferences pref;
-
-//   void set(String ip) {
-//     state = ip;
-//     pref.setString("echoVRIP", state);
-//   }
-// }
-
-// class EchoVRPort extends StateNotifier<String> {
-//   EchoVRPort(this.pref) : super(pref?.getString("echoVRPort") ?? []);
-
-//   static final provider = StateNotifierProvider<EchoVRPort, String>((ref) {
-//     final pref = ref.watch(sharedPrefs).maybeWhen(
-//           data: (value) => value,
-//           orElse: () => '127.0.0.1',
-//         );
-//     return EchoVRPort(pref);
-//   });
-
-//   final SharedPreferences pref;
-
-//   void set(String ip) {
-//     state = ip;
-//     pref.setString("echoVRPort", state);
-//   }
-// }
 
 Future setMaxWindowSize() async {
   await DesktopWindow.setWindowSize(Size(560, 870));
@@ -151,17 +155,22 @@ Future setMaxWindowSize() async {
   await DesktopWindow.setMaxWindowSize(Size(800, 1000));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(sharedPreferencesProvider);
+
     return MaterialApp(
       title: 'Spark Mini',
       // theme: IgniteTheme.darkTheme,
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
-        colorSchemeSeed: Colors.red,
+        brightness: settings.getBool('darkMode') ?? true
+            ? Brightness.dark
+            : Brightness.light,
+        colorSchemeSeed: colorSchemes[settings.getInt('colorScheme') ?? 2]
+            ['color'],
       ),
       home: MyHomePage(
         title: 'Spark Mini',
@@ -206,24 +215,22 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
 
   @override
   Widget build(BuildContext context) {
-    var bottomNavigationItems = <BottomNavigationBarItem>[
-      BottomNavigationBarItem(
+    var bottomNavigationItems = <Widget>[
+      NavigationDestination(
           icon: const Icon(Icons.dashboard), label: "Dashboard"),
-      BottomNavigationBarItem(
+      NavigationDestination(
           icon: const Icon(Icons.share), label: "Share Match"),
-      BottomNavigationBarItem(
-          icon: const Icon(Icons.rule), label: "Match Rules"),
-      BottomNavigationBarItem(
-          icon: const Icon(Icons.bug_report), label: "Debug"),
+      NavigationDestination(icon: const Icon(Icons.rule), label: "Match Rules"),
+      NavigationDestination(icon: const Icon(Icons.bug_report), label: "Debug"),
       // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
-      BottomNavigationBarItem(
+      NavigationDestination(
           icon: const Icon(Icons.settings), label: "Settings"),
     ];
 
     List<Widget> _tabViews = [
       DashboardWidget(),
-      AtlasWidget(),
+      ShareWidget(),
       MatchRulesPage(),
       DebugPage(),
       // ReplayWidget(replayFilePath),
@@ -237,18 +244,15 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
-        // backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        centerTitle: true,
+        toolbarHeight: 40,
       ),
       body: _tabViews[_currentPage.value],
-      bottomNavigationBar: BottomNavigationBar(
-        showUnselectedLabels: true,
-        items: bottomNavigationItems,
-        currentIndex: _currentPage.value,
-        type: BottomNavigationBarType.shifting,
-        selectedItemColor: Colors.red,
-        unselectedItemColor: Colors.white.withOpacity(.5),
-        // backgroundColor: Colors.black12,
-        onTap: (index) {
+      bottomNavigationBar: NavigationBar(
+        destinations: bottomNavigationItems,
+        selectedIndex: _currentPage.value,
+        onDestinationSelected: (index) {
           setState(() {
             _currentPage.value = index;
           });
