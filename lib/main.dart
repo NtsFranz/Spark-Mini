@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:desktop_window/desktop_window.dart';
 import 'package:flutter/material.dart';
-import 'package:spark_mini/Pages/MatchRulesPage.dart';
+import 'Pages/MatchRulesPage.dart';
+import 'Pages/OpenSparkLinkScreen.dart';
 import 'Model/APIFrame.dart';
 import 'Model/ColorSchemes.dart';
 import 'Pages/ShareWidget.dart';
@@ -176,6 +177,20 @@ class MyApp extends ConsumerWidget {
         title: 'Spark Mini',
         restorationId: 'root',
       ),
+
+      // Provide a function to handle named routes.
+      // Use this function to identify the named
+      // route being pushed, and create the correct
+      // Screen.
+      onGenerateRoute: (settings) {
+        print(settings.name);
+
+        return MaterialPageRoute(
+          builder: (context) {
+            return OpenSparkLinkScreen(link: settings.name);
+          },
+        );
+      },
     );
   }
 }

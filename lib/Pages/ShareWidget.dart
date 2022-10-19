@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:spark_mini/Pages/OpenSparkLinkScreen.dart';
 import '../Keys.dart';
 import '../MatchJoiner.dart';
 import '../Model/APIFrame.dart';
@@ -10,7 +11,8 @@ import '../Services/spark_links.dart';
 import '../main.dart';
 
 class ShareWidget extends ConsumerStatefulWidget {
-  const ShareWidget({Key key}) : super(key: key);
+  final String defaultSparkLink;
+  const ShareWidget({Key key, this.defaultSparkLink = ''}) : super(key: key);
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => ShareWidgetState();
@@ -48,8 +50,10 @@ class ShareWidgetState extends ConsumerState<ShareWidget> {
               return Container(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    primary: Theme.of(context).colorScheme.primaryContainer,
-                    onPrimary: Theme.of(context).colorScheme.onPrimaryContainer,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
                     padding: EdgeInsets.all(24),
                   ),
                   onPressed: (() {
@@ -83,8 +87,10 @@ class ShareWidgetState extends ConsumerState<ShareWidget> {
               return Container(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    primary: Theme.of(context).colorScheme.primaryContainer,
-                    onPrimary: Theme.of(context).colorScheme.onPrimaryContainer,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
                     padding: EdgeInsets.all(14),
                   ),
                   onPressed: (() {
@@ -267,6 +273,48 @@ class ShareWidgetState extends ConsumerState<ShareWidget> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           fetchMatches(frame?.client_name ?? "_");
+          Navigator.pushNamed(
+            context,
+            "/129743838098",
+          );
+
+          // showDialog<String>(
+          //   context: context,
+          //   builder: (BuildContext context) => AlertDialog(
+          //     title: const Text('AlertDialog Title'),
+          //     content: const Text('AlertDialog description'),
+          //     actions: <Widget>[
+          //       TextButton(
+          //         onPressed: () => Navigator.pop(context, 'Cancel'),
+          //         child: const Text('Cancel'),
+          //       ),
+          //       CircularProgressIndicator()
+          //     ],
+          //   ),
+          // );
+
+          // showBottomSheet(
+          //   context: context,
+          //   builder: (BuildContext context) {
+          //     return Container(
+          //       height: 200,
+          //       color: Colors.amber,
+          //       child: Center(
+          //         child: Column(
+          //           mainAxisAlignment: MainAxisAlignment.center,
+          //           mainAxisSize: MainAxisSize.min,
+          //           children: <Widget>[
+          //             const Text('Modal BottomSheet'),
+          //             ElevatedButton(
+          //               child: const Text('Close BottomSheet'),
+          //               onPressed: () => Navigator.pop(context),
+          //             ),
+          //           ],
+          //         ),
+          //       ),
+          //     );
+          //   },
+          // );
         },
         child: const Icon(Icons.refresh),
         tooltip: "Refresh Matches",

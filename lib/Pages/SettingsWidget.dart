@@ -107,7 +107,8 @@ class SettingsWidget extends ConsumerWidget {
                   Expanded(
                     child: ListTile(
                       title: Text("Link Type"),
-                      subtitle: Text("Join as spectator or player"),
+                      subtitle: Text(
+                          "Join as spectator or player. It is always recommended to use Choose links."),
                     ),
                   ),
                   DropdownButton<String>(
