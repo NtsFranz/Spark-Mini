@@ -15,7 +15,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.1.0+16
+version: 1.1.2+19
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -50,13 +50,14 @@ dependencies:
   cupertino_icons: ^1.0.2
   percent_indicator: "^4.0.0"
   network_info_plus: ^2.2.0
+  package_info_plus: ^3.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   # flutter_launcher_icons: ^0.8.0
   flutter_native_splash: ^2.2.10+1
-  # msix: ^0.1.5
+  msix: ^3.6.6
   build_runner:
   json_serializable: ^6.4.1
 
@@ -105,11 +106,12 @@ flutter:
   # see https://flutter.dev/custom-fonts/#from-packages
 msix_config:
   display_name: Spark Mini
-  publisher_display_name: ignitevr.gg
-  publisher:
-  identity_name:
-  msix_version: 1.0.0.0
+  publisher_display_name: NtsFranz
+  publisher: CN=4740C6DF-BA63-45AD-9255-0937307FCCA1
+  identity_name: 25937NtsFranz.SparkMini
+  # msix_version: 1.0.0.0
   icons_background_color: "#ffffff"
   architecture: x64
   # See https://docs.microsoft.com/en-us/windows/uwp/packaging/app-capability-declarations
   capabilities: "internetClient"
+  store: true

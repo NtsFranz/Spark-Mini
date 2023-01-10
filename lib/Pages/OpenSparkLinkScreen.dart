@@ -104,7 +104,7 @@ class OpenSparkLinkScreenState extends ConsumerState<OpenSparkLinkScreen> {
             }())),
             margin: EdgeInsets.all(20),
           );
-        } else if (!inGame) {
+        } else {
           return ListView(
             padding: const EdgeInsets.all(12),
             children: <Widget>[
@@ -168,28 +168,29 @@ class OpenSparkLinkScreenState extends ConsumerState<OpenSparkLinkScreen> {
               ])
             ],
           );
-        } else {
-          return Container(
-            child: Center(
-                child: Column(
-              children: [
-                Text(
-                  "Not in a match or lobby.\nCan't join spark:// link.",
-                  textScaleFactor: 1.3,
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(
-                  height: 10,
-                ),
-                ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text("Back to Spark Mini"))
-              ],
-              mainAxisAlignment: MainAxisAlignment.center,
-            )),
-            margin: EdgeInsets.all(20),
-          );
         }
+        // else {
+        //   return Container(
+        //     child: Center(
+        //         child: Column(
+        //       children: [
+        //         Text(
+        //           "Not in a match or lobby.\nCan't join spark:// link.",
+        //           textScaleFactor: 1.3,
+        //           textAlign: TextAlign.center,
+        //         ),
+        //         SizedBox(
+        //           height: 10,
+        //         ),
+        //         ElevatedButton(
+        //             onPressed: () => Navigator.pop(context),
+        //             child: Text("Back to Spark Mini"))
+        //       ],
+        //       mainAxisAlignment: MainAxisAlignment.center,
+        //     )),
+        //     margin: EdgeInsets.all(20),
+        //   );
+        // }
       }()),
     );
   }
@@ -221,7 +222,7 @@ class OpenSparkLinkScreenState extends ConsumerState<OpenSparkLinkScreen> {
     } else {
       final settings = ref.read(sharedPreferencesProvider);
       var echoVRIP = settings.getString('echoVRIP');
-      var echoVRPort = settings.setString('echoVRPort', '6721');
+      var echoVRPort = settings.getString('echoVRPort');
 
       while (mounted) {
         try {

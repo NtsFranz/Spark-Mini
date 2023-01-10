@@ -10,6 +10,8 @@ class SettingsWidget extends ConsumerWidget {
     final settings = ref.watch(sharedPreferencesProvider);
     final echoVRIP = ref.watch(echoVRIPProvider);
     final echoVRPort = ref.watch(echoVRPortProvider);
+    final versionNumber = ref.watch(versionNumberProvider);
+
     return ListView(padding: const EdgeInsets.all(12), children: <Widget>[
       Container(
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -294,6 +296,17 @@ class SettingsWidget extends ConsumerWidget {
         //     ),
         //   ]),
         // ]))
+
+        SizedBox(
+          height: 10,
+        ),
+        Row(
+          children: [
+            Text("v$versionNumber"),
+            SizedBox(width: 10),
+          ],
+          mainAxisAlignment: MainAxisAlignment.end,
+        ),
       ]))
     ]);
   }

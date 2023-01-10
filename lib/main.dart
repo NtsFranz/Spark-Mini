@@ -14,6 +14,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'Services/frame_fetcher.dart';
 import 'Services/other_api_fetchers.dart';
@@ -55,6 +56,23 @@ final ipLocationResponseProvider = StateProvider<Map<String, dynamic>>((ref) {
       return value;
     },
   );
+});
+
+final versionNumberFutureProvider = FutureProvider((ref) async {
+  PackageInfo packageInfo = await PackageInfo.fromPlatform();
+
+  String appName = packageInfo.appName;
+  String packageName = packageInfo.packageName;
+  String version = packageInfo.version;
+  String buildNumber = packageInfo.buildNumber;
+
+  return version + "+" + buildNumber;
+});
+
+final versionNumberProvider = StateProvider((ref) {
+  final f = ref.watch(versionNumberFutureProvider);
+
+  return f.when(data: (data) => data, error: (e1, e2) => "", loading: () => "");
 });
 
 final orangeTeamVRMLInfoProvider = StateProvider((ref) {
@@ -236,7 +254,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       NavigationDestination(
           icon: const Icon(Icons.share), label: "Share Match"),
       NavigationDestination(icon: const Icon(Icons.rule), label: "Match Rules"),
-      NavigationDestination(icon: const Icon(Icons.bug_report), label: "Debug"),
+      // NavigationDestination(icon: const Icon(Icons.bug_report), label: "Debug"),
       // BottomNavigationBarItem(icon: const Icon(Icons.replay), label: "Replays"),
       // BottomNavigationBarItem(icon: const Icon(Icons.web), label: "Ignite Stats"),
       NavigationDestination(
@@ -247,7 +265,7 @@ class _MyHomePageState extends State<MyHomePage> with RestorationMixin {
       DashboardWidget(),
       ShareWidget(),
       MatchRulesPage(),
-      DebugPage(),
+      // DebugPage(),
       // ReplayWidget(replayFilePath),
       // IgniteStatsWidget(),
       // ColorPage(Colors.yellow),

@@ -780,11 +780,16 @@ class DashboardWidgetState extends ConsumerState<DashboardWidget> {
     var baseIP = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
 
     var ips = <String>[];
+    ips.add('127.0.0.1');
     for (var i = 0; i < 255; i++) {
       final ip = i;
       ips.add('$baseIP.$ip');
     }
-    ips.add('127.0.0.1');
+    // add QPro interface
+    for (var i = 0; i < 255; i++) {
+      final ip = i;
+      ips.add('192.168.43.$ip');
+    }
 
     setState(() {
       findingQuestIPProgress = 0;

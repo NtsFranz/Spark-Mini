@@ -140,6 +140,15 @@ class ShareWidgetState extends ConsumerState<ShareWidget> {
                                       return Text('From Atlas app');
                                     }
                                   }()),
+                                ],
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                              ),
+                            ),
+                            Container(
+                              margin: EdgeInsets.all(8),
+                              child: Row(
+                                children: [
                                   ElevatedButton(
                                     onPressed: () {
                                       String link = getFormattedLink(
@@ -159,7 +168,7 @@ class ShareWidgetState extends ConsumerState<ShareWidget> {
                                           .showSnackBar(snackBar);
                                     },
                                     child: Row(children: [
-                                      Text("Copy Join Link"),
+                                      Text("Copy Link"),
                                       Container(
                                           margin: EdgeInsets.all(4),
                                           child: Icon(
@@ -168,8 +177,44 @@ class ShareWidgetState extends ConsumerState<ShareWidget> {
                                           ))
                                     ]),
                                     style: ElevatedButton.styleFrom(
-                                      primary: Colors.black12, // background
-                                      onPrimary: Colors.white, // foreground
+                                      foregroundColor: Colors.white,
+                                      backgroundColor:
+                                          Colors.black12, // foreground
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      String link = getFormattedLink(
+                                          match['matchid'],
+                                          true,
+                                          0,
+                                          true,
+                                          match['blue_team_info'],
+                                          match['orange_team_info']);
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) {
+                                            return OpenSparkLinkScreen(
+                                                link: link);
+                                          },
+                                        ),
+                                      );
+                                    },
+                                    child: Row(children: [
+                                      Text("Join"),
+                                      Container(
+                                          margin: EdgeInsets.all(4),
+                                          child: Icon(
+                                            Icons.copy,
+                                            size: 16,
+                                          ))
+                                    ]),
+                                    style: ElevatedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor:
+                                          Colors.black12, // foreground
                                     ),
                                   )
                                 ],
@@ -273,10 +318,11 @@ class ShareWidgetState extends ConsumerState<ShareWidget> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           fetchMatches(frame?.client_name ?? "_");
-          Navigator.pushNamed(
-            context,
-            "/129743838098",
-          );
+
+          // Navigator.pushNamed(
+          //   context,
+          //   "/129743838098",
+          // );
 
           // showDialog<String>(
           //   context: context,
