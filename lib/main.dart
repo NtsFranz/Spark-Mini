@@ -183,6 +183,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Spark Mini',
       // theme: IgniteTheme.darkTheme,
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         brightness: settings.getBool('darkMode') ?? true
